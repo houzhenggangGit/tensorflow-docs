@@ -1,6 +1,7 @@
-# 回归示例
+# Regression Examples
 
-本章提供下面这些简短的例子来说明如何在 Estimators 中实现回归算法：
+This unit provides the following short examples demonstrating how
+to implement regression in Estimators:
 
 <table>
   <tr> <th>Example</th> <th>Data Set</th> <th>Demonstrates How To...</th></tr>
@@ -8,37 +9,44 @@
   <tr>
     <td><a href="https://www.tensorflow.org/code/tensorflow/examples/get_started/regression/linear_regression.py">linear_regression.py</a></td>
     <td>[imports85](https://archive.ics.uci.edu/ml/datasets/automobile)</td>
-    <td>使用 @{tf.estimator.LinearRegressor} Estimator 基于数值数据来训练一个回归模型。</td>
+    <td>Use the @{tf.estimator.LinearRegressor} Estimator to train a
+        regression model on numeric data.</td>
   </tr>
 
   <tr>
     <td><a href="https://www.tensorflow.org/code/tensorflow/examples/get_started/regression/linear_regression_categorical.py">linear_regression_categorical.py</a></td>
     <td>[imports85](https://archive.ics.uci.edu/ml/datasets/automobile)</td>
-    <td>使用 @{tf.estimator.LinearRegressor} Estimator 基于分类数据来训练一个回归模型。</td>
+    <td>Use the @{tf.estimator.LinearRegressor} Estimator to train a
+        regression model on categorical data.</td>
   </tr>
 
   <tr>
     <td><a href="https://www.tensorflow.org/code/tensorflow/examples/get_started/regression/dnn_regression.py">dnn_regression.py</a></td>
     <td>[imports85](https://archive.ics.uci.edu/ml/datasets/automobile)</td>
-    <td>使用 @{tf.estimator.DNNRegressor} Estimator 基于离散数据和深度神经网络来训练一个回归模型。</td>
+    <td>Use the @{tf.estimator.DNNRegressor} Estimator to train a
+        regression model on discrete data with a deep neural network.</td>
   </tr>
 
   <tr>
     <td><a href="https://www.tensorflow.org/code/tensorflow/examples/get_started/regression/custom_regression.py">custom_regression.py</a></td>
     <td>[imports85](https://archive.ics.uci.edu/ml/datasets/automobile)</td>
-    <td>使用 @{tf.estimator.Estimator} 来训练一个自定义 dnn 回归模型。</td>
+    <td>Use @{tf.estimator.Estimator} to train a customized dnn
+        regression model.</td>
   </tr>
 
 </table>
 
-上面的例子依赖于以下数据集程序：
+The preceding examples rely on the following data set utility:
 
 <table>
   <tr> <th>Utility</th> <th>Description</th></tr>
 
   <tr>
     <td><a href="../../examples/get_started/regression/imports85.py">imports85.py</a></td>
-    <td><tt>imports85</tt> 这个程序提供了一些工具函数，它们可以将数据集加载成其他 TensorFlow 程序 (例如, <tt>linear_regression.py</tt> 和 <tt>dnn_regression.py</tt>) 可以使用的格式。</td>
+    <td>This program provides utility functions that load the
+        <tt>imports85</tt> data set into formats that other TensorFlow
+        programs (for example, <tt>linear_regression.py</tt> and
+        <tt>dnn_regression.py</tt>) can use.</td>
   </tr>
 
 
@@ -47,11 +55,9 @@
 
 <!--
 ## Linear regression concepts
-## 线性回归概念
 
 If you are new to machine learning and want to learn about regression,
 watch the following video:
-如果你是机器学习的新人并且还想多了解关于回归的知识的话，可以观看下面的视频：
 
 (todo:jbgordon) Video introduction goes here.
 -->
@@ -62,27 +68,33 @@ watch the following video:
 
 
 <a name="running"></a>
-## 运行示例
+## Running the examples
 
-你必须先 @{$install$安装 TensorFlow} 才能运行这些示例。根据你安装 TensorFlow 的方式，你或许还需要激活你的 TensorFlow 的运行环境。然后按照下面的步骤操作：
+You must @{$install$install TensorFlow} prior to running these examples.
+Depending on the way you've installed TensorFlow, you might also
+need to activate your TensorFlow environment.  Then, do the following:
 
-1. 从 github 上 clone TensorFlow 的仓库。
-2. 使用 `cd` 命令切换至下载路径的顶层。
-3. 切换到你的 tensorflow 当前版本所在的分支：`git checkout rX.X`
-4. `cd tensorflow/examples/get_started/regression`。
+1. Clone the TensorFlow repository from github.
+2. `cd` to the top of the downloaded tree.
+3. Check out the branch for you current tensorflow version: `git checkout rX.X`
+4. `cd tensorflow/examples/get_started/regression`.
 
-你现在可以通过 Python 运行 TensorFlow  `tensorflow/examples/get_started/regression` 目录下的任何示例：
+You can now run any of the example TensorFlow programs in the
+`tensorflow/examples/get_started/regression` directory as you
+would run any Python program:
 
 ```bsh
 python linear_regressor.py
 ```
 
-在训练期间，三个程序都会输出以下信息：
+During training, all three programs output the following information:
 
-* 检查点目录的名字，这对于 TensorBoard 来说很重要。
-* 每迭代 100 步之后的训练误差，这个数值可以帮助你确定模型是否正在收敛。
+* The name of the checkpoint directory, which is important for TensorBoard.
+* The training loss after every 100 iterations, which helps you
+  determine whether the model is converging.
 
-举例来说，对于 `linear_regressor.py` 这个程序，下面的就是一些可能的输出：
+For example, here's some possible output for the `linear_regressor.py`
+program:
 
 ```bsh
 INFO:tensorflow:Saving checkpoints for 1 into /tmp/tmpAObiz9/model.ckpt.
@@ -102,7 +114,8 @@ INFO:tensorflow:Loss for final step: 5.12413.
 <a name="basic"></a>
 ## linear_regressor.py
 
-`linear_regressor.py` 训练了一个可以基于两个数值特征预测汽车价格的模型。
+`linear_regressor.py` trains a model that predicts the price of a car from
+two numerical features.
 
 <table>
   <tr>
@@ -127,13 +140,17 @@ INFO:tensorflow:Loss for final step: 5.12413.
   </tr>
 </table>
 
-训练模型之后，这个程序会输出这两个汽车模型的预测价格。
+After training the model, the program concludes by outputting predicted
+car prices for two car models.
+
 
 
 <a name="categorical"></a>
 ## linear_regression_categorical.py
 
-这个程序向我们说明了标识分类特征的一些方法。同时也展示了如何基于分类和数值特征来训练一个线性模型。
+This program illustrates ways to represent categorical features. It
+also demonstrates how to train a linear model based on a mix of
+categorical and numerical features.
 
 <table>
   <tr>
@@ -163,7 +180,12 @@ INFO:tensorflow:Loss for final step: 5.12413.
 <a name="dnn"></a>
 ## dnn_regression.py
 
-像 `linear_regression_categorical.py` 一样，`dnn_regression.py` 这个例子也训练了一个基于两个特征预测汽车价格的模型，但是 `dnn_regression.py` 这个例子使用了一个深度神经网络来训练模型。这两个例子都依赖于同样的特征。`dnn_regression.py` 展示了如何在一个深度神经网络中处理分类特征。
+Like `linear_regression_categorical.py`, the `dnn_regression.py` example
+trains a model that predicts the price of a car from two features.
+Unlike `linear_regression_categorical.py`, the `dnn_regression.py` example uses
+a deep neural network to train the model.  Both examples rely on the same
+features; `dnn_regression.py` demonstrates how to treat categorical features
+in a deep neural network.
 
 <table>
   <tr>
@@ -190,14 +212,25 @@ INFO:tensorflow:Loss for final step: 5.12413.
   </tr>
 </table>
 
-在打印出损失值之后，程序会在测试集中输出均方误差。
+After printing loss values, the program outputs the Mean Square Error
+on a test set.
 
 
 <a name="dnn"></a>
 ## custom_regression.py
 
-`custom_regression.py` 这个例子同样也是基于真实价格和分类作为输入来预测汽车价格的模型。不像 `linear_regression_categorical.py` 和 `dnn_regression.py`，这个例子没有使用预估计量，而是使用 @{tf.estimator.Estimator$`Estimator`} 类定义了一个自定义模型。这个自定义模型与 `dnn_regression.py` 定义的模型十分相似。
+The `custom_regression.py` example also trains a model that predicts the price
+of a car based on mixed real-valued and categorical input features, described by
+feature_columns. Unlike `linear_regression_categorical.py`, and
+`dnn_regression.py` this example does not use a pre-made estimator, but defines
+a custom model using the base @{tf.estimator.Estimator$`Estimator`} class. The
+custom model is quite similar to the model defined by `dnn_regression.py`.
 
-这个自定义模型是通过构造器的参数 `model_fn` 来定义的。当 `model_fn` 被调用时，`params` 字典会被传入 `model_fn`，这样使得模型的复用性更高。
+The custom model is defined by the `model_fn` argument to the constructor. The
+customization is made more reusable through `params` dictionary, which is later
+passed through to the `model_fn` when the `model_fn` is called.
 
-`model_fn` 将会返回一个 @{tf.estimator.EstimatorSpec$`EstimatorSpec`}，它是一个简单的可以表示 `Estimator` 的结构。
+The `model_fn` returns an
+@{tf.estimator.EstimatorSpec$`EstimatorSpec`} which is a simple structure
+indicating to the `Estimator` which operations should be run to accomplish
+varions tasks.

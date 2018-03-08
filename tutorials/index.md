@@ -1,35 +1,53 @@
-# 教程
+# Tutorials
 
-本章节给出了一些使用 TensorFlow 解决特定任务的示例教程。如果您是第一次使用 TensorFlow，建议您在阅读这些教程前先阅读“开始”一章的内容。
+This section contains tutorials demonstrating how to do specific tasks
+in TensorFlow.  If you are new to TensorFlow, we recommend reading the
+documents in the "Get Started" section before reading these tutorials.
 
-下面的教程解释了在 TensorFlow 系统中与 CPU 和 GPU 的交互：
+The following tutorial explains the interaction of CPUs and GPUs on a
+TensorFlow system:
 
   * @{$using_gpu$Using GPUs}
 
-下面的教程涵盖了图像识别的各个方面：
+The following tutorials cover different aspects of image recognition:
 
-  * @{$image_recognition$Image Recognition}：本教程简单介绍了图像识别领域以及用于识别图像的 Inception 模型。
-  * @{$image_retraining$How to Retrain Inception's Final Layer for New Categories}：如题所述。
-  * @{$layers$A Guide to TF Layers: Building a Convolutional Neural Network}：本教程介绍了卷积神经网络（CNN），并演示了如何在 TensorFlow 中构建 CNN。
-  * @{$deep_cnn$Convolutional Neural Networks}：演示了如何构建一个小型的 CNN 来进行图像识别。本教程面向 TensorFlow 的高级用户。
+  * @{$image_recognition$Image Recognition}, which introduces the field of
+    image recognition and a model (Inception) for recognizing images.
+  * @{$image_retraining$How to Retrain Inception's Final Layer for New Categories},
+    which has a wonderfully self-explanatory title.
+  * @{$layers$A Guide to TF Layers: Building a Convolutional Neural Network},
+    which introduces convolutional neural networks (CNNs) and demonstrates how
+    to build a CNN in TensorFlow.
+  * @{$deep_cnn$Convolutional Neural Networks}, which demonstrates how to
+    build a small CNN for recognizing images.  This tutorial is aimed at
+    advanced TensorFlow users.
 
-下面的教程主要介绍了自然语言中的机器学习问题：
+The following tutorials focus on machine learning problems in human language:
 
-  * @{$word2vec$Vector Representations of Words}：演示了如何为单词创建词嵌入（word embedding）。
-  * @{$recurrent$Recurrent Neural Networks}：演示了如何使用 RNN 来预测句子中的下一个单词。
-  * @{$seq2seq$Sequence-to-Sequence Models}：演示了如何使用序列到序列（seq2seq）模型将英语文本翻译为法语。
+  * @{$word2vec$Vector Representations of Words}, which demonstrates how to
+    create an embedding for words.
+  * @{$recurrent$Recurrent Neural Networks}, which demonstrates how to use a
+    recurrent neural network to predict the next word in a sentence.
+  * @{$seq2seq$Sequence-to-Sequence Models}, which demonstrates how to use a
+    sequence-to-sequence model to translate text from English to French.
 
-下面的教程主要介绍了线性模型：
+The following tutorials focus on linear models:
 
-  * @{$linear$Large-Scale Linear Models with TensorFlow}：本教程介绍了线性模型，并演示了如何通过高级 API 构建线性模型。
-  * @{$wide$TensorFlow Linear Model Tutorial}：演示了如何使用 TensorFlow 解决一个二分类问题。
-  * @{$wide_and_deep$TensorFlow Wide & Deep Learning Tutorial}：介绍了如何使用高级 API 对一个宽线性模型和一个深层前馈神经网络进行联合训练。
-  * @{$kernel_methods$Improving Linear Models Using Explicit Kernel Methods}：展示了如何使用核映射来提高线性模型性能。
-  * @{$audio_recognition$Simple Audio Recognition}：展示了如何构建一个简单的语言识别网络。
+  * @{$linear$Large-Scale Linear Models with TensorFlow}, which introduces
+    linear models and demonstrates how to build them with the high-level API.
+  * @{$wide$TensorFlow Linear Model Tutorial}, which demonstrates how to solve
+    a binary classification problem in TensorFlow.
+  * @{$wide_and_deep$TensorFlow Wide & Deep Learning Tutorial}, which explains
+    how to use the high-level API to jointly train both a wide linear model
+    and a deep feed-forward neural network.
+  * @{$kernel_methods$Improving Linear Models Using Explicit Kernel Methods},
+    which shows how to improve the quality of a linear model by using explicit
+    kernel mappings.
+  * @{$audio_recognition$Simple Audio Recognition}, which shows how to
+    build a basic speech recognition network.
 
-虽然 TensorFlow 专注于机器学习领域，但是您也可以使用 TensorFlow 解决一些其它类型的数学问题。例如：
+Although TensorFlow specializes in machine learning, you may also use
+TensorFlow to solve other kinds of math problems.  For example:
 
   * @{$mandelbrot$Mandelbrot Set}
   * @{$pdes$Partial Differential Equations}
-
-

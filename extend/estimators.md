@@ -1,79 +1,105 @@
-# 在 tf.estimator 中创建评估器
+# Creating Estimators in tf.estimator
 
-tf.estimator 框架中的高层 API 评估器（Estimator）让构建和训练模型变得更加简单。通过在`估计器`中提供的可以实例化的类，我们可以快速配置常见的模型类型，譬如回归模型和分类器：
-
+The tf.estimator framework makes it easy to construct and train machine
+learning models via its high-level Estimator API. `Estimator`
+offers classes you can instantiate to quickly configure common model types such
+as regressors and classifiers:
 
 *   @{tf.estimator.LinearClassifier}:
-    可用于构建线性分类模型。
+    Constructs a linear classification model.
 *   @{tf.estimator.LinearRegressor}:
-    可用于构建线性回归模型。
+    Constructs a linear regression model.
 *   @{tf.estimator.DNNClassifier}:
-    可用于构建神经网络分类模型。
+    Construct a neural network classification model.
 *   @{tf.estimator.DNNRegressor}:
-    可用于构建神经网络回归模型。
+    Construct a neural network regression model.
 *   @{tf.estimator.DNNLinearCombinedClassifier}:
-    可用于构建神经网络和线性结合的分类模型。
+    Construct a neural network and linear combined classification model.
 *   @{tf.estimator.DNNLinearCombinedRegressor}:
-    可用于构建神经网络和线性结合的回归模型。
+    Construct a neural network and linear combined regression model.
 
-但是万一 `tf.estimator` 中预先定义的模型类型不能满足您的要求呢？您想要细粒度的调整模型的配置，譬如自定义损失函数优化器，给每一层神经网络指定不同的激活函数。又或者实现一个打分或者推荐系统，而分类器和回归器都不适应于产生预测。
+But what if none of `tf.estimator`'s predefined model types meets your needs?
+Perhaps you need more granular control over model configuration, such as
+the ability to customize the loss function used for optimization, or specify
+different activation functions for each neural network layer. Or maybe you're
+implementing a ranking or recommendation system, and neither a classifier nor a
+regressor is appropriate for generating predictions.
 
-所以，这篇文章还包含了如何使用 `tf.estiamtor` 中模块来构建一个自定义的`评估器`，它可以根据物理测量的结果来预测[鲍鱼](https://en.wikipedia.org/wiki/Abalone)的年龄，通过这个例子您将学会做如下操作：
+This tutorial covers how to create your own `Estimator` using the building
+blocks provided in `tf.estimator`, which will predict the ages of
+[abalones](https://en.wikipedia.org/wiki/Abalone) based on their physical
+measurements. You'll learn how to do the following:
 
-*   实例化一个`评估器`
-*   构建一个自定义的模型函数
-*   使用 `tf.feature_column` 和 `tf.layers` 配置一个神经网络
-*   从 `tf.losses` 中选择一个合适的损失函数
-*   为您的模型定义一个训练操作
-*   生成和返回预测结果
+*   Instantiate an `Estimator`
+*   Construct a custom model function
+*   Configure a neural network using `tf.feature_column` and `tf.layers`
+*   Choose an appropriate loss function from `tf.losses`
+*   Define a training op for your model
+*   Generate and return predictions
 
-## 预备条件
+## Prerequisites
 
-这篇文章假定你已经知道基本的 tf.estimator 操作，入定义特征列，输入函数，和添加 `train()`/`evaluate()`/`predict()` 操作。如果您之前没有使用过 tf.estimator，或者需要温习，下面的文章或许可以帮到你：
+This tutorial assumes you already know tf.estimator API basics, such as
+feature columns, input functions, and `train()`/`evaluate()`/`predict()`
+operations. If you've never used tf.estimator before, or need a refresher,
+you should first review the following tutorials:
 
-*   @{$estimator$tf.estimator Quickstart}: 如何使用 tf.estmator 快速搭建一个神经网络。
-*   @{$wide$TensorFlow Linear Model Tutorial}: 如何使用 tf.estimator 定义特征列，进而搭建线性回归器。
-*   @{$input_fn$Building Input Functions with tf.estimator}: 如何构建 input_fn 函数来为您的模型添加数据预处理操作。
-    
-## 一个鲍鱼年龄的预测器 {#abalone-predictor}
+*   @{$estimator$tf.estimator Quickstart}: Quick introduction to
+    training a neural network using tf.estimator.
+*   @{$wide$TensorFlow Linear Model Tutorial}: Introduction to
+    feature columns, and an overview on building a linear classifier in
+    tf.estimator.
+*   @{$input_fn$Building Input Functions with tf.estimator}: Overview of how
+    to construct an input_fn to preprocess and feed data into your models.
 
-我们可以通过壳的环数来估计[鲍鱼](https://en.wikipedia.org/wiki/Abalone)的年龄。但是这种方法需要对壳进行切割，染色后置于显微镜下观察后才能估计，所以我们想找到预测年龄的其他测量值。
+## An Abalone Age Predictor {#abalone-predictor}
 
-这里有一份鲍鱼的[数据集](https://archive.ics.uci.edu/ml/datasets/Abalone)，
-里面包含的[特征数据](https://archive.ics.uci.edu/ml/machine-learning-databases/abalone/abalone.names)
-如下：
+It's possible to estimate the age of an
+[abalone](https://en.wikipedia.org/wiki/Abalone) (sea snail) by the number of
+rings on its shell. However, because this task requires cutting, staining, and
+viewing the shell under a microscope, it's desirable to find other measurements
+that can predict age.
 
-| 特征名          | 描述                                                      |
+The [Abalone Data Set](https://archive.ics.uci.edu/ml/datasets/Abalone) contains
+the following
+[feature data](https://archive.ics.uci.edu/ml/machine-learning-databases/abalone/abalone.names)
+for abalone:
+
+| Feature        | Description                                               |
 | -------------- | --------------------------------------------------------- |
-| 长度         | 鲍鱼的长度 (最长的方向; 单位为毫米)           |
-| 直径       | 鲍鱼的直径（根据正交的方向来测量：单位为毫米）|
-| 高度         | 鲍鱼的高度（鲍鱼肉在壳里，单位为毫米）     |
-| 重量   | 整个鲍鱼的重量（单位为克）                      |
-| 肉的重量 | 鲍鱼肉的重量（单位为克）                    |
-| 脏器的重量 | 晒干后，鲍鱼肉的重量（单位为克）          |
-| 壳的重量   | 晒干后，壳的重量（单位为克）                  |
+| Length         | Length of abalone (in longest direction; in mm)           |
+| Diameter       | Diameter of abalone (measurement perpendicular to length; in mm)|
+| Height         | Height of abalone (with its meat inside shell; in mm)     |
+| Whole Weight   | Weight of entire abalone (in grams)                       |
+| Shucked Weight | Weight of abalone meat only (in grams)                    |
+| Viscera Weight | Gut weight of abalone (in grams), after bleeding          |
+| Shell Weight   | Weight of dried abalone shell (in grams)                  |
 
-预测的标签是环的数量，代表着鲍鱼的年龄。
+The label to predict is number of rings, as a proxy for abalone age.
 
 ![Abalone shell](https://www.tensorflow.org/images/abalone_shell.jpg)
-**[“鲍鱼壳”](https://www.flickr.com/photos/thenickster/16641048623/) (by [Nicki Dugan
+**[“Abalone shell”](https://www.flickr.com/photos/thenickster/16641048623/) (by [Nicki Dugan
 Pogue](https://www.flickr.com/photos/thenickster/), CC BY-SA 2.0)**
 
-## 准备工作
+## Setup
 
-本教程使用了三个数据集。
+This tutorial uses three data sets.
 [`abalone_train.csv`](http://download.tensorflow.org/data/abalone_train.csv)
- 包含了 3320 个标注的训练样本
- [`abalone_test.csv`](http://download.tensorflow.org/data/abalone_test.csv)
- 包含了 850 个标注的测试样本
+contains labeled training data comprising 3,320 examples.
+[`abalone_test.csv`](http://download.tensorflow.org/data/abalone_test.csv)
+contains labeled test data for 850 examples.
 [`abalone_predict`](http://download.tensorflow.org/data/abalone_predict.csv)
- 包含了 7 个用于预测的样本
+contains 7 examples on which to make predictions.
 
-接下来的章节将逐步完成 `评估器` 代码的编写，完整的代码请查看[这里](https://www.tensorflow.org/code/tensorflow/examples/tutorials/estimators/abalone.py)。
+The following sections walk through writing the `Estimator` code step by step;
+the [full, final code is available
+here](https://www.tensorflow.org/code/tensorflow/examples/tutorials/estimators/abalone.py).
 
-## 加载鲍鱼的 CSV 数据到 TensorFlow Datasets
+## Loading Abalone CSV Data into TensorFlow Datasets
 
-为了给模型供给鲍鱼的数据集，我们需要将数据集下载下来，然后将 CSVs 加载到 TensorFlow 的 `Dataset`s 中。首先，我们需要导入 TensorFlow 和 Python 中的一些库，然后设置 FLAGS：
+To feed the abalone dataset into the model, you'll need to download and load the
+CSVs into TensorFlow `Dataset`s. First, add some standard Python and TensorFlow
+imports, and set up FLAGS:
 
 ```python
 from __future__ import absolute_import
@@ -84,7 +110,7 @@ import argparse
 import sys
 import tempfile
 
-# 导入 urllib
+# Import urllib
 from six.moves import urllib
 
 import numpy as np
@@ -93,17 +119,19 @@ import tensorflow as tf
 FLAGS = None
 ```
 
-开启打印日志：
+Enable logging:
 
 ```python
 tf.logging.set_verbosity(tf.logging.INFO)
 ```
 
-然后定义函数来加载 CSVs（接收命令行参数从本地加载或从[官网](https://www.tensorflow.org/)下载）
+Then define a function to load the CSVs (either from files specified in
+command-line options, or downloaded from
+[tensorflow.org](https://www.tensorflow.org/)):
 
 ```python
 def maybe_download(train_data, test_data, predict_data):
-  """可能会下载训练数据并返回训练和测试文件的名字"""
+  """Maybe downloads training data and returns train and test file names."""
   if train_data:
     train_file_name = train_data
   else:
@@ -139,23 +167,26 @@ def maybe_download(train_data, test_data, predict_data):
   return train_file_name, test_file_name, predict_file_name
 ```
 
-最后，创建 `main()` 函数来加载鲍鱼的 CSVs 到 `Datasets` 中去，定义标记让用户可以通过命令行来指定训练，测试和预测数据集的 CSV 文件（默认情况下，文件将会从[官网](https://www.tensorflow.org/)上下载）：
+Finally, create `main()` and load the abalone CSVs into `Datasets`, defining
+flags to allow users to optionally specify CSV files for training, test, and
+prediction datasets via the command line (by default, files will be downloaded
+from [tensorflow.org](https://www.tensorflow.org/)):
 
 ```python
 def main(unused_argv):
-  # 加载数据集
+  # Load datasets
   abalone_train, abalone_test, abalone_predict = maybe_download(
     FLAGS.train_data, FLAGS.test_data, FLAGS.predict_data)
 
-  # 训练样本
+  # Training examples
   training_set = tf.contrib.learn.datasets.base.load_csv_without_header(
       filename=abalone_train, target_dtype=np.int, features_dtype=np.float64)
 
-  # 测试样本
+  # Test examples
   test_set = tf.contrib.learn.datasets.base.load_csv_without_header(
       filename=abalone_test, target_dtype=np.int, features_dtype=np.float64)
 
-  # 包含 7 个样本的集合，用于预测鲍鱼的年龄
+  # Set of 7 examples for which to predict abalone ages
   prediction_set = tf.contrib.learn.datasets.base.load_csv_without_header(
       filename=abalone_predict, target_dtype=np.int, features_dtype=np.float64)
 
@@ -175,9 +206,11 @@ if __name__ == "__main__":
   tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
 ```
 
-## 实例化一个评估器
+## Instantiating an Estimator
 
-当实例化 tf.estimator's 中提供的一个类时，譬如说 `DNNClassifier`，你可以提供所有的配置参数给到构造函数，如下所示：
+When defining a model using one of tf.estimator's provided classes, such as
+`DNNClassifier`, you supply all the configuration parameters right in the
+constructor, e.g.:
 
 ```python
 my_nn = tf.estimator.DNNClassifier(feature_columns=[age, height, weight],
@@ -188,138 +221,208 @@ my_nn = tf.estimator.DNNClassifier(feature_columns=[age, height, weight],
                                    optimizer="Adam")
 ```
 
-我们不再需要编写任何代码来指导 TensorFlow 训练模型，计算损失，或者返回预测值；因为相关逻辑的实现已经包含在 `DNNClassifier` 中了。
+You don't need to write any further code to instruct TensorFlow how to train the
+model, calculate loss, or return predictions; that logic is already baked into
+the `DNNClassifier`.
 
-相比之下，当你从零开始创建自己的评估器时，构造器只接受模型配置的两个高级参数 `model_fn` 和 `params`：
+By contrast, when you're creating your own estimator from scratch, the
+constructor accepts just two high-level parameters for model configuration,
+`model_fn` and `params`:
 
 ```python
 nn = tf.estimator.Estimator(model_fn=model_fn, params=model_params)
 ```
 
-*   `model_fn`：一个方法对象，里面包含了上面所提到的训练，评价，和预测逻辑。您需要负责实现该函数。下一个章节，[构建 `model_fn`](#constructing-modelfn) 包含了创建模型函数的细节。
+*   `model_fn`: A function object that contains all the aforementioned logic to
+    support training, evaluation, and prediction. You are responsible for
+    implementing that functionality. The next section, [Constructing the
+    `model_fn`](#constructing-modelfn) covers creating a model function in
+    detail.
 
-*   `params`: 超参数值（譬如：学习率，dropout），类型为字典，将会被传递给 `model_fn`。
+*   `params`: An optional dict of hyperparameters (e.g., learning rate, dropout)
+    that will be passed into the `model_fn`.
 
-注意：类似 `tf.estimator` 模块中预先定义好的回归器和分类器实例化那样，`Estimator` 的实例化也要接受 `model_dir` 和 `config` 参数。
+Note: Just like `tf.estimator`'s predefined regressors and classifiers, the
+`Estimator` initializer also accepts the general configuration arguments
+`model_dir` and `config`.
 
-训练鲍鱼年龄预测器模型需要配置一个超参数：学习率。在代码中（下面高亮的部分），`学习率` 被定义为一个常量。
+For the abalone age predictor, the model will accept one hyperparameter:
+learning rate. Define `LEARNING_RATE` as a constant at the beginning of your
+code (highlighted in bold below), right after the logging configuration:
 
 <pre class="prettyprint"><code class="lang-python">tf.logging.set_verbosity(tf.logging.INFO)
 
 <strong># Learning rate for the model
 LEARNING_RATE = 0.001</strong></code></pre>
 
-注意：这里我们将 `LEARNING_RATE` 值设为 `0.001`，但你可以根据自己的需求来进行微调，进而让训练得到的模型拥有更好的效果。
+Note: Here, `LEARNING_RATE` is set to `0.001`, but you can tune this value as
+needed to achieve the best results during model training.
 
-然后，添加下面的代码到 `main()` 中，它将包含学习率的 `model_params` 字典作为参数来实例化 `Estimator`：
+Then, add the following code to `main()`, which creates the dict `model_params`
+containing the learning rate and instantiates the `Estimator`:
 
 ```python
-# 配置模型参数
+# Set model params
 model_params = {"learning_rate": LEARNING_RATE}
 
-# 实例化评估器
+# Instantiate Estimator
 nn = tf.estimator.Estimator(model_fn=model_fn, params=model_params)
 ```
 
-## 构建模型函数（`model_fn`） {#constructing-modelfn}
+## Constructing the `model_fn` {#constructing-modelfn}
 
-模型函数是构建`评估器`需要传入的参数，它的基本架构如下：
+The basic skeleton for an `Estimator` API model function looks like this:
 
 ```python
 def model_fn(features, labels, mode, params):
-   # 相关逻辑的逻辑如下：
-   # 1. 通过使用 TensorFlow 的一些操作函数配置模型。
-   # 2. 定义训练 / 评价的损失函数。
-   # 3. 定义训练操作所使用的优化器。
-   # 4. 生成预测。
-   # 5. 返回在 EstimatorSpec 对象中定义的预测 / 损失 / 训练操作 / 评价指标
-   return EstimatorSpec(mode, predictions, loss, train_op, eval_metric_ops) 
+   # Logic to do the following:
+   # 1. Configure the model via TensorFlow operations
+   # 2. Define the loss function for training/evaluation
+   # 3. Define the training operation/optimizer
+   # 4. Generate predictions
+   # 5. Return predictions/loss/train_op/eval_metric_ops in EstimatorSpec object
+   return EstimatorSpec(mode, predictions, loss, train_op, eval_metric_ops)
 ```
 
-`model_fn` 必须传入下面三个参数
+The `model_fn` must accept three arguments:
 
-*   `features`: 一个包含特征的字典类型变量，它将会通过 `input_fn` 传递给模型。
-*   `labels`: 一个包含标签数据的`张量`类型变量，它将会通过 `input_fn` 传递给模型。在`预测`的时候，该字段值为空，因为模型将会推断其对应的值。
-*   `mode`: 下面的字符串值 @{tf.estimator.ModeKeys} 代表 model_fn 在哪一个场景中调用：
-    *   `tf.estimator.ModeKeys.TRAIN`：意味着 `model_fn` 在训练场景中被调用了，即调用了 `train()` 方法。
-    *   `tf.estimator.ModeKeys.EVAL`：意味着 `model_fn` 在评价场景中被调用了，即调用了 `evaluate()` 方法。
+*   `features`: A dict containing the features passed to the model via
+    `input_fn`.
+*   `labels`: A `Tensor` containing the labels passed to the model via
+    `input_fn`. Will be empty for `predict()` calls, as these are the values the
+    model will infer.
+*   `mode`: One of the following @{tf.estimator.ModeKeys} string values
+    indicating the context in which the model_fn was invoked:
+    *   `tf.estimator.ModeKeys.TRAIN` The `model_fn` was invoked in training
+        mode, namely via a `train()` call.
+    *   `tf.estimator.ModeKeys.EVAL`. The `model_fn` was invoked in
+        evaluation mode, namely via an `evaluate()` call.
+    *   `tf.estimator.ModeKeys.PREDICT`. The `model_fn` was invoked in
+        predict mode, namely via a `predict()` call.
 
-    *   `tf.estimator.ModeKeys.PREDICT`：意味着 `model_fn` 在预测场景中被调用了，即调用了 `train()` 方法。
+`model_fn` may also accept a `params` argument containing a dict of
+hyperparameters used for training (as shown in the skeleton above).
 
-在 `model_fn` 中也可以通过传入类型为字典的 `params` 变量来设置训练的超参数（如上所述）。
+The body of the function performs the following tasks (described in detail in the
+sections that follow):
 
-该函数将执行下列任务（细节将会在后续章节介绍）：
+*   Configuring the model—here, for the abalone predictor, this will be a neural
+    network.
+*   Defining the loss function used to calculate how closely the model's
+    predictions match the target values.
+*   Defining the training operation that specifies the `optimizer` algorithm to
+    minimize the loss values calculated by the loss function.
 
-*   配置模型，在这里，鲍鱼年龄预测器使用的是神经网络。
-*   定义损失函数，用来计算模型预测的结果是否与真实结果的吻合程度。
-*   定义训练模型时所使用的`优化器`，它可以不断的优化模型，从而最小化损失函数的值。
+The `model_fn` must return a @{tf.estimator.EstimatorSpec}
+object, which contains the following values:
 
-`model_fn` 必须返回 @{tf.estimator.EstimatorSpec} 对象，该对象包含了下面几个值：
+*   `mode` (required). The mode in which the model was run. Typically, you will
+    return the `mode` argument of the `model_fn` here.
 
-*   `mode`（必选）：模型运行在什么场景下，一般来说，你只要返回 `model_fn` 传入的 `mode` 参数的值即可。
+*   `predictions` (required in `PREDICT` mode). A dict that maps key names of
+    your choice to `Tensor`s containing the predictions from the model, e.g.:
 
-*   `predictions`（在`预测`场景下）：一个字典类型的变量，key 值是您输入数据的索引，而 value 则是模型对应给出的预测值，举个例子：
     ```python
     predictions = {"results": tensor_of_predictions}
     ```
-	在`预测`场景下，模型返回的预测值实际上是 `EstimatorSpce` 中的 `predict()` 方法返回的，因此您可以自行修改该方法，从而返回自定义的数据格式并消费它。
-	
 
-*   `loss`（在`评价`或`训练`场景下），一个损失值的`张量`：该值是模型损失函数的输出值（在后面章节将深入讨论，[为模型定义损失函数](#defining-loss)）。通过遍历所有样本与模型预测结果的差距，我们可以在`训练`场景下输出日志来监控模型训练是否出现异常，而在`评价`场景下则可以作为模型性能好坏的评价指标之一。
-    
+    In `PREDICT` mode, the dict that you return in `EstimatorSpec` will then be
+    returned by `predict()`, so you can construct it in the format in which
+    you'd like to consume it.
 
-*   `train_op`（只在`训练`场景下）：执行一次训练的操作。
 
-*   `eval_metric_ops`（可选）：一个字典（名称/值对）类型的返回值，包含了在`评价`场景下需要计算的指标。它的「名称」是您要计算的指标名，而「值」是该计算该指标后的值。@{tf.metrics} 模块为很多常见的指标提供了预定义的函数。下面的 `eval_metric_ops` 操作则使用了 `tf.metrics.accuracy` 来计算`准确率`。
-    
+*   `loss` (required in `EVAL` and `TRAIN` mode). A `Tensor` containing a scalar
+    loss value: the output of the model's loss function (discussed in more depth
+    later in [Defining loss for the model](#defining-loss)) calculated over all
+    the input examples. This is used in `TRAIN` mode for error handling and
+    logging, and is automatically included as a metric in `EVAL` mode.
+
+*   `train_op` (required only in `TRAIN` mode). An Op that runs one step of
+    training.
+
+*   `eval_metric_ops` (optional). A dict of name/value pairs specifying the
+    metrics that will be calculated when the model runs in `EVAL` mode. The name
+    is a label of your choice for the metric, and the value is the result of
+    your metric calculation. The @{tf.metrics}
+    module provides predefined functions for a variety of common metrics. The
+    following `eval_metric_ops` contains an `"accuracy"` metric calculated using
+    `tf.metrics.accuracy`:
+
     ```python
     eval_metric_ops = {
         "accuracy": tf.metrics.accuracy(labels, predictions)
     }
     ```
-    
-    如果你没有指定 `eval_metric_ops `，那么在模型评价中只有`损失值`会被计算。
 
-### 使用 `tf.feature_column` 和 `tf.layers` 配置神经网络
+    If you do not specify `eval_metric_ops`, only `loss` will be calculated
+    during evaluation.
 
-构建[神经网络](https://en.wikipedia.org/wiki/Artificial_neural_network)需要创建和连接输入层，隐藏层，和输出层。
+### Configuring a neural network with `tf.feature_column` and `tf.layers`
 
-输入层是一系列的结点（代表模型里的特征），它会接收特征数据，而特征数据 `features` 是作为参数传递到 `model_fn` 函数中的。如果 `features` 包含一个 n 维的`张量`，每一维包含一条特征数据，那么它就可以直接输入到输入层中去。如果 `features` 是一个字典类型的特征列 @{$linear#feature-columns-and-transformations$feature columns}，并且是通过输入函数传入到模型中的，那么你可以使用 @{tf.feature_column.input_layer} 函数将其转换为`张量`输入到输入层中。
+Constructing a [neural
+network](https://en.wikipedia.org/wiki/Artificial_neural_network) entails
+creating and connecting the input layer, the hidden layers, and the output
+layer.
+
+The input layer is a series of nodes (one for each feature in the model) that
+will accept the feature data that is passed to the `model_fn` in the `features`
+argument. If `features` contains an n-dimensional `Tensor` with all your feature
+data, then it can serve as the input layer.
+If `features` contains a dict of @{$linear#feature-columns-and-transformations$feature columns} passed to
+the model via an input function, you can convert it to an input-layer `Tensor`
+with the @{tf.feature_column.input_layer} function.
 
 ```python
 input_layer = tf.feature_column.input_layer(
     features=features, feature_columns=[age, height, weight])
 ```
 
-如上所述，`input_layer()` 接收两个参数：
+As shown above, `input_layer()` takes two required arguments:
 
-*   `features`：一个字典类型的变量，其中键是字符串，值是字符串对应的特征数据的`张量`。同时，它也作为 `features` 参数的值传递到 `model_fn` 方法中。
-*   `feature_columns`：一个包含模型中所有特征列的列表变量，在上面的例子中，该值为 [`age`, `height`, `weight`]。
+*   `features`. A mapping from string keys to the `Tensors` containing the
+    corresponding feature data. This is exactly what is passed to the `model_fn`
+    in the `features` argument.
+*   `feature_columns`. A list of all the `FeatureColumns` in the model—`age`,
+    `height`, and `weight` in the above example.
 
-一般来说，在神经网络的输入层后面都会连接着一层或者几层的隐藏层，而每一层的输出会经过[激活函数](https://en.wikipedia.org/wiki/Activation_function)（非线性）转换后再输入到下一层。最后的一层隐藏层则会连接到输出层，从而得到模型最终的输出结果。`tf.layers` 模块里提供了 `tf.layers.dense` 函数来构建全连接层。通过控制 `activation` 参数的值，我们可以指定不同的激活函数，其中一些可选的值如下：
+The input layer of the neural network then must be connected to one or more
+hidden layers via an [activation
+function](https://en.wikipedia.org/wiki/Activation_function) that performs a
+nonlinear transformation on the data from the previous layer. The last hidden
+layer is then connected to the output layer, the final layer in the model.
+`tf.layers` provides the `tf.layers.dense` function for constructing fully
+connected layers. The activation is controlled by the `activation` argument.
+Some options to pass to the `activation` argument are:
 
-*   `tf.nn.relu`：下面的代码中，我们创建了一个全连接的隐藏层，而且上一层的输出会先经过 [ReLU 激活函数](https://en.wikipedia.org/wiki/Rectifier_\(neural_networks\))
-    (@{tf.nn.relu})转换后再输入到隐藏层中。
+*   `tf.nn.relu`. The following code creates a layer of `units` nodes fully
+    connected to the previous layer `input_layer` with a
+    [ReLU activation function](https://en.wikipedia.org/wiki/Rectifier_\(neural_networks\))
+    (@{tf.nn.relu}):
 
     ```python
     hidden_layer = tf.layers.dense(
         inputs=input_layer, units=10, activation=tf.nn.relu)
-    ```    
-	
-*   `tf.nn.relu6`：下面的代码中，我们创建了一个全连接的隐藏层，而且上一层的输出会先经过 ReLU 6 激活函数
-    (@{tf.nn.relu6})转换后再输入到隐藏层中。
-    
+    ```
+
+*   `tf.nn.relu6`. The following code creates a layer of `units` nodes fully
+    connected to the previous layer `hidden_layer` with a ReLU 6 activation
+    function (@{tf.nn.relu6}):
+
     ```python
     second_hidden_layer = tf.layers.dense(
-        inputs=hidden_layer, units=20, activation=tf.nn.relu6)
-    ```    
+        inputs=hidden_layer, units=20, activation=tf.nn.relu)
+    ```
 
-*   `None`：下面的代码中，我们创建了一个全连接的隐藏层，而且上一层的输出会直接输入到隐藏层中。
+*   `None`. The following code creates a layer of `units` nodes fully connected
+    to the previous layer `second_hidden_layer` with *no* activation function,
+    just a linear transformation:
+
     ```python
     output_layer = tf.layers.dense(
         inputs=second_hidden_layer, units=3, activation=None)
     ```
-其他的一些激活函数，譬如：
+
+Other activation functions are possible, e.g.:
 
 ```python
 output_layer = tf.layers.dense(inputs=second_hidden_layer,
@@ -327,72 +430,99 @@ output_layer = tf.layers.dense(inputs=second_hidden_layer,
                                activation_fn=tf.sigmoid)
 ```
 
-上述代码创建了一个全连接的`输出层`，它与 `second_hidden_layer` 连接，而且上一层的输出会先经过 sigmoid 激活函数转换后再输入到输出层中。关于 TensorFlow 中预定义的激活函数，请查阅 @{$python/nn#activation_functions$API docs}。
+The above code creates the neural network layer `output_layer`, which is fully
+connected to `second_hidden_layer` with a sigmoid activation function
+(@{tf.sigmoid}). For a list of predefined
+activation functions available in TensorFlow, see the @{$python/nn#activation_functions$API docs}.
 
-汇总上述的内容，我们可以创建一个全连接的神经网络作为鲍鱼年龄的预测器，并且获得它所对应的预测结果，代码如下：
+Putting it all together, the following code constructs a full neural network for
+the abalone predictor, and captures its predictions:
 
 ```python
 def model_fn(features, labels, mode, params):
-  """评估器所对应的模型函数"""
+  """Model function for Estimator."""
 
-  # 连接输入层和第一个隐藏层
-  # (features["x"]) 将会经过 ReLU 转换
+  # Connect the first hidden layer to input layer
+  # (features["x"]) with relu activation
   first_hidden_layer = tf.layers.dense(features["x"], 10, activation=tf.nn.relu)
 
-  # 将第二个隐藏层与第一个隐藏层连接在一起，并且激活函数为 ReLU
+  # Connect the second hidden layer to first hidden layer with relu
   second_hidden_layer = tf.layers.dense(
       first_hidden_layer, 10, activation=tf.nn.relu)
 
-  # 将输出层与第二个隐藏层连接在一起（无激活函数）
+  # Connect the output layer to second hidden layer (no activation fn)
   output_layer = tf.layers.dense(second_hidden_layer, 1)
 
-  # 将输出层的值转换为 1 维的张量，然后作为预测值返回
+  # Reshape output layer to 1-dim Tensor to return predictions
   predictions = tf.reshape(output_layer, [-1])
   predictions_dict = {"ages": predictions}
   ...
 ```
 
-在这里，我们会将鲍鱼的`数据集`通过 `numpy_input_fn` 传递给模型，如上所示，`features` 是一个字典类型的变量 `{"x": data_tensor}`，它会输入到输入层中进行计算。该网络包含了两层的隐藏层，每一层由 10 个结点组成，并且使用了 ReLU 激活函数。最后的输出层输出模型预测结果的时候没有使用激活函数，但使用了 @{tf.reshape} 将模型的预测结果转换成一维数组，并将其保存在变量 `predictions_dict` 中。
+Here, because you'll be passing the abalone `Datasets` using `numpy_input_fn`
+as shown below, `features` is a dict `{"x": data_tensor}`, so
+`features["x"]` is the input layer. The network contains two hidden
+layers, each with 10 nodes and a ReLU activation function. The output layer
+contains no activation function, and is
+@{tf.reshape} to a one-dimensional
+tensor to capture the model's predictions, which are stored in
+`predictions_dict`.
 
+### Defining loss for the model {#defining-loss}
 
-## 为模型定义损失函数 {#defining-loss}
+The `EstimatorSpec` returned by the `model_fn` must contain `loss`: a `Tensor`
+representing the loss value, which quantifies how well the model's predictions
+reflect the label values during training and evaluation runs. The @{tf.losses}
+module provides convenience functions for calculating loss using a variety of
+metrics, including:
 
-`model_fn` 返回的 `EstimatorSpec` 对象是一定要包含`损失值`的：损失值是由损失函数计算所得，它在模型的训练或评价的过程中可以有效的度量预测值与真实值之间的差距。为了方便我们使用，@{tf.losses} 模块封装了一些常用的损失函数：
+*   `absolute_difference(labels, predictions)`. Calculates loss using the
+    [absolute-difference
+    formula](https://en.wikipedia.org/wiki/Deviation_\(statistics\)#Unsigned_or_absolute_deviation)
+    (also known as L<sub>1</sub> loss).
 
-*   `absolute_difference(labels, predictions)`：使用[绝对差公式](https://en.wikipedia.org/wiki/Deviation_\(statistics\)#Unsigned_or_absolute_deviation)计算损失值（又称 L<sub>1</sub> 损失）
+*   `log_loss(labels, predictions)`. Calculates loss using the [logistic loss
+    forumula](https://en.wikipedia.org/wiki/Loss_functions_for_classification#Logistic_loss)
+    (typically used in logistic regression).
 
-*   `log_loss(labels, predictions)`：使用[对数损失公式](https://en.wikipedia.org/wiki/Loss_functions_for_classification#Logistic_loss)计算损失值（常在逻辑回归中使用）。
+*   `mean_squared_error(labels, predictions)`. Calculates loss using the [mean
+    squared error](https://en.wikipedia.org/wiki/Mean_squared_error) (MSE; also
+    known as L<sub>2</sub> loss).
 
-*   `mean_squared_error(labels, predictions)`：使用[均方误差公式](https://en.wikipedia.org/wiki/Mean_squared_error)计算损失值（简称 MSE，L<sub>2</sub> 损失）
-
-在 `model_fn` 中，我们使用 `mean_squared_error()`（粗体处）定义了损失函数，如下所示：
+The following example adds a definition for `loss` to the abalone `model_fn`
+using `mean_squared_error()` (in bold):
 
 <pre class="prettyprint"><code class="lang-python">def model_fn(features, labels, mode, params):
-  """评估器的模型函数"""
+  """Model function for Estimator."""
 
-  # 将输入层和第一个隐藏层连接起来
+  # Connect the first hidden layer to input layer
   # (features["x"]) with relu activation
   first_hidden_layer = tf.layers.dense(features["x"], 10, activation=tf.nn.relu)
 
-  # 将第二个隐藏层与第一个隐藏层连接起来
+  # Connect the second hidden layer to first hidden layer with relu
   second_hidden_layer = tf.layers.dense(
       first_hidden_layer, 10, activation=tf.nn.relu)
 
-  # 将输出层与第二个隐藏层连接起来
+  # Connect the output layer to second hidden layer (no activation fn)
   output_layer = tf.layers.dense(second_hidden_layer, 1)
 
-  # 转换输出层值为一维张量，然后作为预测值返回
+  # Reshape output layer to 1-dim Tensor to return predictions
   predictions = tf.reshape(output_layer, [-1])
   predictions_dict = {"ages": predictions}
 
 
-  <strong># 使用均方误差计算损失值
+  <strong># Calculate loss using mean squared error
   loss = tf.losses.mean_squared_error(labels, predictions)</strong>
   ...</code></pre>
 
-如果你想了解 @{tf.losses} 模块中更多的损失函数及其用法，请查看 @{$python/contrib.losses$API guide}
+See the @{$python/contrib.losses$API guide} for a
+full list of loss functions and more details on supported arguments and usage.
 
-可以将评估的补充指标添加到 `eval_metric_ops` 字典中，下面是添加 `rmse` 指标的一个例子，它会计算根据模型的预测值来计算根均方差。注意`标签`张量被转换成 `float64` 类型，为的是与模型返回的`预测`张量的类型保持一致。
+Supplementary metrics for evaluation can be added to an `eval_metric_ops` dict.
+The following code defines an `rmse` metric, which calculates the root mean
+squared error for the model predictions. Note that the `labels` tensor is cast
+to a `float64` type to match the data type of the `predictions` tensor, which
+will contain real values:
 
 ```python
 eval_metric_ops = {
@@ -401,12 +531,18 @@ eval_metric_ops = {
 }
 ```
 
-## 为模型定义训练操作
+### Defining the training op for the model
 
-TensorFlow 在用模型拟合训练数据的时候需要使用相关的优化算法，通常的目标是最小化损失值，所以我们需要为训练模型定义一个优化算法，也就是训练操作。一个快捷的创建训练操作的办法就是实例化 `tf.train.Optimizer` 的子类然后调用 `minimize` 方法。
+The training op defines the optimization algorithm TensorFlow will use when
+fitting the model to the training data. Typically when training, the goal is to
+minimize loss. A simple way to create the training op is to instantiate a
+`tf.train.Optimizer` subclass and call the `minimize` method.
 
-在 `model_fn` 中我们定义了一个梯度下降优化器来最小化损失函数计算出来的值，同时也将学习率传递给 `param` 参数。对于`全局步长`这个参数的设置，我们使用 @{tf.train.get_global_step} 
-函数来生成一个合适的整数变量。
+The following code defines a training op for the abalone `model_fn` using the
+loss value calculated in [Defining Loss for the Model](#defining-loss), the
+learning rate passed to the function in `params`, and the gradient descent
+optimizer. For `global_step`, the convenience function
+@{tf.train.get_global_step} takes care of generating an integer variable:
 
 ```python
 optimizer = tf.train.GradientDescentOptimizer(
@@ -415,40 +551,44 @@ train_op = optimizer.minimize(
     loss=loss, global_step=tf.train.get_global_step())
 ```
 
-关于更多的优化器和其细节，请看 @{$python/train#optimizers$API guide}。
+For a full list of optimizers, and other details, see the
+@{$python/train#optimizers$API guide}.
 
-### 完整的模型函数（`model_fn`）
+### The complete abalone `model_fn`
 
-我们已经完成了鲍鱼预测器对应的模型函数的编写，包含了配置神经网络，定制损失函数和训练操作，返回包含 `mode`，`predictions_dict` 和 `train_op` 的 `EstimatorSpec` 对象，代码如下：
+Here's the final, complete `model_fn` for the abalone age predictor. The
+following code configures the neural network; defines loss and the training op;
+and returns a `EstimatorSpec` object containing `mode`, `predictions_dict`, `loss`,
+and `train_op`:
 
 ```python
 def model_fn(features, labels, mode, params):
-  """评估器的模型函数"""
+  """Model function for Estimator."""
 
-  # 将第一个隐藏层连接到输入层
+  # Connect the first hidden layer to input layer
   # (features["x"]) with relu activation
   first_hidden_layer = tf.layers.dense(features["x"], 10, activation=tf.nn.relu)
 
-  # 将第二个隐藏层连接到第一个隐藏层，且激活函数为 ReLU
+  # Connect the second hidden layer to first hidden layer with relu
   second_hidden_layer = tf.layers.dense(
       first_hidden_layer, 10, activation=tf.nn.relu)
 
-  # 将输出层连接到第二个隐藏（无激活函数）
+  # Connect the output layer to second hidden layer (no activation fn)
   output_layer = tf.layers.dense(second_hidden_layer, 1)
 
-  # 转换输出层的输出值为一维张量，然后作为预测结果返回
+  # Reshape output layer to 1-dim Tensor to return predictions
   predictions = tf.reshape(output_layer, [-1])
 
-  # 根据 `ModeKeys.PREDICT` 对应的场景提供评估器
+  # Provide an estimator spec for `ModeKeys.PREDICT`.
   if mode == tf.estimator.ModeKeys.PREDICT:
     return tf.estimator.EstimatorSpec(
         mode=mode,
         predictions={"ages": predictions})
 
-  # 使用均方误差计算损失值
+  # Calculate loss using mean squared error
   loss = tf.losses.mean_squared_error(labels, predictions)
 
-  # 使用均方根误差作为额外的评价指标
+  # Calculate root mean squared error as additional eval metric
   eval_metric_ops = {
       "rmse": tf.metrics.root_mean_squared_error(
           tf.cast(labels, tf.float64), predictions)
@@ -459,7 +599,7 @@ def model_fn(features, labels, mode, params):
   train_op = optimizer.minimize(
       loss=loss, global_step=tf.train.get_global_step())
 
-  # 为 `ModeKeys.EVAL` 和 `ModeKeys.TRAIN` 场景提供评估器
+  # Provide an estimator spec for `ModeKeys.EVAL` and `ModeKeys.TRAIN` modes.
   return tf.estimator.EstimatorSpec(
       mode=mode,
       loss=loss,
@@ -467,11 +607,14 @@ def model_fn(features, labels, mode, params):
       eval_metric_ops=eval_metric_ops)
 ```
 
-## 运行模型
+## Running the Abalone Model
 
-到此为止，我们已经为鲍鱼年龄预测器定义了`模型函数`，也实例化了一个 `评估器`；剩下的工作就是训练，评价和预测了。
+You've instantiated an `Estimator` for the abalone predictor and defined its
+behavior in `model_fn`; all that's left to do is train, evaluate, and make
+predictions.
 
-在 `main()` 后面添加如下代码来让神经网络拟合训练数据并评价准确率：
+Add the following code to the end of `main()` to fit the neural network to the
+training data and evaluate accuracy:
 
 ```python
 train_input_fn = tf.estimator.inputs.numpy_input_fn(
@@ -480,10 +623,10 @@ train_input_fn = tf.estimator.inputs.numpy_input_fn(
     num_epochs=None,
     shuffle=True)
 
-# 训练
+# Train
 nn.train(input_fn=train_input_fn, steps=5000)
 
-# 准确率
+# Score accuracy
 test_input_fn = tf.estimator.inputs.numpy_input_fn(
     x={"x": np.array(test_set.data)},
     y=np.array(test_set.target),
@@ -495,9 +638,12 @@ print("Loss: %s" % ev["loss"])
 print("Root Mean Squared Error: %s" % ev["rmse"])
 ```
 
-注意：在训练和评价中，训练（`train_input_fn`）和评价（`test_input_fn`）样本都供给了张量 `x` 和 `y`，想了解输入函数相关的细节，请查看 @{$input_fn$Building Input Functions with tf.estimator} 指南。
+Note: The above code uses input functions to feed feature (`x`) and label (`y`)
+`Tensor`s into the model for both training (`train_input_fn`) and evaluation
+(`test_input_fn`). To learn more about input functions, see the tutorial
+@{$input_fn$Building Input Functions with tf.estimator}.
 
-运行代码后。你应该可以看到下面类似的输出。
+Then run the code. You should see output like the following:
 
 ```none
 ...
@@ -509,12 +655,14 @@ INFO:tensorflow:Saving evaluation summary for 5000 step: loss = 5.581
 Loss: 5.581
 ```
 
-输出的损失值是`模型函数`在 `ABALONE_TEST` 数据集上计算的均方误差值
+The loss score reported is the mean squared error returned from the `model_fn`
+when run on the `ABALONE_TEST` data set.
 
-在 `main()` 后面添加如下代码后，我们可以预测 `ABALONE_PREDICT` 数据集中样本的年龄。
+To predict ages for the `ABALONE_PREDICT` data set, add the following to
+`main()`:
 
 ```python
-# 输出预测
+# Print out predictions
 predict_input_fn = tf.estimator.inputs.numpy_input_fn(
     x={"x": prediction_set.data},
     num_epochs=1,
@@ -524,7 +672,9 @@ for i, p in enumerate(predictions):
   print("Prediction %s: %s" % (i + 1, p["ages"]))
 ```
 
-在这里，`predict()` 函数返回的结果 `predictions` 是可迭代的。然后使用 `for` 循环枚举输出结果。执行这段代码，您应该可以看到如下输出：
+Here, the `predict()` function returns results in `predictions` as an iterable.
+The `for` loop enumerates and prints out the results. Rerun the code, and you
+should see output similar to the following:
 
 ```python
 ...
@@ -537,9 +687,11 @@ Prediction 6: 9.39239
 Prediction 7: 11.1289
 ```
 
-## 附件的资料
+## Additional Resources
 
-恭喜您！您已经成功的使用 tf.estimator 模块创建了一个 `评估器`。更多关于创建 `Estimator`s 的资料，请查看如下的 API 指南：
+Congrats! You've successfully built a tf.estimator `Estimator` from scratch.
+For additional reference materials on building `Estimator`s, see the following
+sections of the API guides:
 
 *   @{$python/contrib.layers$Layers}
 *   @{$python/contrib.losses$Losses}

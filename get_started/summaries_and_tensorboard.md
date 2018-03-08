@@ -1,34 +1,91 @@
-# Tensorboard：可视化学习面板
+# TensorBoard: Visualizing Learning
 
-Tensorflow 做的一些计算是复杂和混乱，就像训练深度神经网络。为了更易于理解、调试和优化Tensorflow程序，我们发布了一套可视化工具称为 Tensorboard。你可以使用 TensorBoard 图形化 Tensorflow 图，绘制图计算过程的定量指标，以及显示图的额外数据。TensorBoard 完成配置后，是这样的：
+The computations you'll use TensorFlow for - like training a massive
+deep neural network - can be complex and confusing. To make it easier to
+understand, debug, and optimize TensorFlow programs, we've included a suite of
+visualization tools called TensorBoard. You can use TensorBoard to visualize
+your TensorFlow graph, plot quantitative metrics about the execution of your
+graph, and show additional data like images that pass through it. When
+TensorBoard is fully configured, it looks like this:
 
-![](https://camo.githubusercontent.com/f0f03739a6b2a0e312f929759fab857856b7cf0c/68747470733a2f2f7777772e74656e736f72666c6f772e6f72672f696d616765732f6d6e6973745f74656e736f72626f6172642e706e67)
+![MNIST TensorBoard](https://www.tensorflow.org/images/mnist_tensorboard.png "MNIST TensorBoard")
 
+<div class="video-wrapper">
+  <iframe class="devsite-embedded-youtube-video" data-video-id="eBbEDRsCmv4"
+          data-autohide="1" data-showinfo="0" frameborder="0" allowfullscreen>
+  </iframe>
+</div>
 
-本教程的目的是让你掌握 TensorBoard 的简单用法。另外，你可以在 [TensorBoard's GitHub](https://github.com/tensorflow/tensorboard) 上找到 TensorBoard 详细用法，技巧和调试信息。
+This tutorial is intended to get you started with simple TensorBoard usage.
+There are other resources available as well! The [TensorBoard's GitHub](https://github.com/tensorflow/tensorboard)
+has a lot more information on TensorBoard usage, including tips & tricks, and
+debugging information.
 
-##数据序列化
+## Serializing the data
 
-TensorBoard 是通过读取 Tensorflow 事件文件来操作的，Tensorflow 事件包含 Tensorflow 运行所生成的汇总数据。下面是 TensorBoard 汇总数据的完整生命周期。
+TensorBoard operates by reading TensorFlow events files, which contain summary
+data that you can generate when running TensorFlow. Here's the general
+lifecycle for summary data within TensorBoard.
 
-首先，创建用于收集汇总数据的 TensorFlow 图，并决定你想哪种节点来记录@{$python/summary$summary 操作}。
-例如，假设你正在训练用于识别 MNIST 数字的卷积神经网络。你希望记录学习速率是如何随时间变化的，以及目标函数是如何变化的。通过将@{tf.summary.scalar} 操作附加在输出学习速率和损耗的节点来收集这些信息。然后，给每一个 scalar_summary 标记一个有意义的标签，比如 'learning rate' 或 'loss function'。
+First, create the TensorFlow graph that you'd like to collect summary
+data from, and decide which nodes you would like to annotate with
+@{$python/summary$summary operations}.
 
-也许你也希望可视化来自特定层的激活分布，或梯度或权重的分布。收集这些分布数据，可以在梯度输出值和权重变量上通过执行@{tf.summary.histogram}操作来得到。
-你可以查阅文档 @{$python/summary$summary 操作} 来找到所有可用的汇总操作信息。
-Tensorflow 上的操作不会做任何事情直到你运行它们，或一个运算取决于这些操作的输出。我们刚刚创建的汇总节点对于你的图来说是次要的：目前没有一个操作是依赖与它们的。因此，为了生成汇总数据，我们需要运行所有这些汇总节点。手工管理他们是乏味的，所以用 @{tf.summary.merge_all} 来将它们组合成一个简单的运算，生成汇总数据。
+For example, suppose you are training a convolutional neural network for
+recognizing MNIST digits. You'd like to record how the learning rate
+varies over time, and how the objective function is changing. Collect these by
+attaching @{tf.summary.scalar} ops
+to the nodes that output the learning rate and loss respectively. Then, give
+each `scalar_summary` a meaningful `tag`, like `'learning rate'` or `'loss
+function'`.
 
-然后，你就可以运行合并汇总命令，它会依据特定步骤将所有数据生成一个序列化的汇总 protobuf 对象。最后，通过汇总 protobuf 对象传递给@{tf.summary.FileWriter}，可以将汇总数据写到磁盘上。
+Perhaps you'd also like to visualize the distributions of activations coming
+off a particular layer, or the distribution of gradients or weights. Collect
+this data by attaching
+@{tf.summary.histogram} ops to
+the gradient outputs and to the variable that holds your weights, respectively.
 
-FileWriter 的构造函数需要包含 logdir，logdir 目录是非常重要的，所有的事件都会写到它所指的目录下。 另外，FileWrite 可以方便地携带一个图对象在它的构造函数中。如果它接收到一个图对象，Tensorboard 会将张量形状信息和你的图像一并显示出来。这会让你更加直观地感受到图的生产过程：查看 [张量图形信息](https://www.tensorflow.org/get_started/graph_viz#tensor_shape_information)
+For details on all of the summary operations available, check out the docs on
+@{$python/summary$summary operations}.
 
-现在已经修改了你的图并且有一个 FileWriter，准备开始你的神经网络吧！如果您愿意，您可以单步运行合并汇总操作，并记录大量的训练数据。不过，这可能比你需要的数据更多。你可以每 n 步执行一次汇总。
+Operations in TensorFlow don't do anything until you run them, or an op that
+depends on their output. And the summary nodes that we've just created are
+peripheral to your graph: none of the ops you are currently running depend on
+them. So, to generate summaries, we need to run all of these summary nodes.
+Managing them by hand would be tedious, so use
+@{tf.summary.merge_all}
+to combine them into a single op that generates all the summary data.
 
-下面的代码示例是对 [简单 MNIST 指南](https://www.tensorflow.org/get_started/mnist/beginners)的更改，其中我们额外每十步执行一次总结。如果你运行这个然后启动 Tensorboard—logdir=/tmp/tensorflow/mnist，你将能够可视化统计数据，例如在训练过程中权重或精确度是如何变化的。下面的代码是一个摘录，完整的资料在 [这里](https://www.tensorflow.org/code/tensorflow/examples/tutorials/mnist/mnist_with_summaries.py)。
+Then, you can just run the merged summary op, which will generate a serialized
+`Summary` protobuf object with all of your summary data at a given step.
+Finally, to write this summary data to disk, pass the summary protobuf to a
+@{tf.summary.FileWriter}.
+
+The `FileWriter` takes a logdir in its constructor - this logdir is quite
+important, it's the directory where all of the events will be written out.
+Also, the `FileWriter` can optionally take a `Graph` in its constructor.
+If it receives a `Graph` object, then TensorBoard will visualize your graph
+along with tensor shape information. This will give you a much better sense of
+what flows through the graph: see
+@{$graph_viz#tensor-shape-information$Tensor shape information}.
+
+Now that you've modified your graph and have a `FileWriter`, you're ready to
+start running your network! If you want, you could run the merged summary op
+every single step, and record a ton of training data. That's likely to be more
+data than you need, though. Instead, consider running the merged summary op
+every `n` steps.
+
+The code example below is a modification of the
+@{$beginners$simple MNIST tutorial},
+in which we have added some summary ops, and run them every ten steps. If you
+run this and then launch `tensorboard --logdir=/tmp/tensorflow/mnist`, you'll be able
+to visualize statistics, such as how the weights or accuracy varied during
+training. The code below is an excerpt; full source is
+[here](https://www.tensorflow.org/code/tensorflow/examples/tutorials/mnist/mnist_with_summaries.py).
 
 ```python
 def variable_summaries(var):
-  """为了 TensorBoard 可视化，给Tensor添加一些汇总"""
+  """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
   with tf.name_scope('summaries'):
     mean = tf.reduce_mean(var)
     tf.summary.scalar('mean', mean)
@@ -40,15 +97,16 @@ def variable_summaries(var):
     tf.summary.histogram('histogram', var)
 
 def nn_layer(input_tensor, input_dim, output_dim, layer_name, act=tf.nn.relu):
-  """用于生成简单的神经网络层的可复用代码。
-  它进行矩阵乘法，偏置加法，然后使用relu进行非线性化。
-  它还设置了名称范围，使得生成的图形易于阅读，
-  并增加了一些汇总操作。
+  """Reusable code for making a simple neural net layer.
+
+  It does a matrix multiply, bias add, and then uses relu to nonlinearize.
+  It also sets up name scoping so that the resultant graph is easy to read,
+  and adds a number of summary ops.
   """
-  # 添加一个名称范围以确保图层的逻辑分组。
+  # Adding a name scope ensures logical grouping of the layers in the graph.
   with tf.name_scope(layer_name):
-  # 这个变量将保存图层权重的状态
-  with tf.name_scope('weights'):
+    # This Variable will hold the state of the weights for the layer
+    with tf.name_scope('weights'):
       weights = weight_variable([input_dim, output_dim])
       variable_summaries(weights)
     with tf.name_scope('biases'):
@@ -68,19 +126,20 @@ with tf.name_scope('dropout'):
   tf.summary.scalar('dropout_keep_probability', keep_prob)
   dropped = tf.nn.dropout(hidden1, keep_prob)
 
-  # 不要使用 softmax 激活，请参阅下文。
+# Do not apply softmax activation yet, see below.
 y = nn_layer(dropped, 500, 10, 'layer2', act=tf.identity)
 
 with tf.name_scope('cross_entropy'):
-  # 交叉熵的原始公式,
+  # The raw formulation of cross-entropy,
   #
-  # tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(tf.softmax(y)),reduction_indices=[1]))
+  # tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(tf.softmax(y)),
+  #                               reduction_indices=[1]))
   #
-  # 可能在数值上不稳定。
+  # can be numerically unstable.
   #
-  # 所以我们在 nn_layer 的原始输出上使用这个操作                       
-  # tf.nn.softmax_cross_entropy_with_logits，然后在批处理     
-  # 数据上进行平均。
+  # So here we use tf.nn.softmax_cross_entropy_with_logits on the
+  # raw outputs of the nn_layer above, and then average across
+  # the batch.
   diff = tf.nn.softmax_cross_entropy_with_logits(targets=y_, logits=y)
   with tf.name_scope('total'):
     cross_entropy = tf.reduce_mean(diff)
@@ -97,24 +156,24 @@ with tf.name_scope('accuracy'):
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 tf.summary.scalar('accuracy', accuracy)
 
-  # 合并所有的汇总信息，并把它们写到 /tmp/mnist_logs（ 默认路
-  # 径 ）
+# Merge all the summaries and write them out to /tmp/mnist_logs (by default)
 merged = tf.summary.merge_all()
 train_writer = tf.summary.FileWriter(FLAGS.summaries_dir + '/train',
                                       sess.graph)
 test_writer = tf.summary.FileWriter(FLAGS.summaries_dir + '/test')
 tf.global_variables_initializer().run()
-
 ```
-在初始化 FileWriters 后，必须要添加汇总到 FileWriters 中作为我们训练和测试的模型。
+
+After we've initialized the `FileWriters`, we have to add summaries to the
+`FileWriters` as we train and test the model.
 
 ```python
-  # 训练模型，并写入汇总信息。
-  # 每10步，测量一次测试集的准确度，并写出测试汇总信息
-  # 所有其他步骤，在训练数据上运行 train_step，并添加训练汇总
+# Train the model, and also write summaries.
+# Every 10th step, measure test-set accuracy, and write test summaries
+# All other steps, run train_step on training data, & add training summaries
 
 def feed_dict(train):
-  """做一个 TensorFlow feed_dict：将数据映射到张量占位符上。"""
+  """Make a TensorFlow feed_dict: maps data onto Tensor placeholders."""
   if train or FLAGS.fake_data:
     xs, ys = mnist.train.next_batch(100, fake_data=FLAGS.fake_data)
     k = FLAGS.dropout
@@ -124,32 +183,37 @@ def feed_dict(train):
   return {x: xs, y_: ys, keep_prob: k}
 
 for i in range(FLAGS.max_steps):
-  if i % 10 == 0:  # 记录汇总和测试集精度
+  if i % 10 == 0:  # Record summaries and test-set accuracy
     summary, acc = sess.run([merged, accuracy], feed_dict=feed_dict(False))
     test_writer.add_summary(summary, i)
     print('Accuracy at step %s: %s' % (i, acc))
-  else:  # 记录训练得到的汇总并且训练
+  else:  # Record train set summaries, and train
     summary, _ = sess.run([merged, train_step], feed_dict=feed_dict(True))
     train_writer.add_summary(summary, i)
-
 ```
 
-
-## 启动 TensorBoard
-
-运行下面命令(二者选一)，运行 TensorBoard。
+You're now all set to visualize this data using TensorBoard.
 
 
-```python
-tensorboard —logdir=path/to/log-directory
+## Launching TensorBoard
 
-（python -m tensorboard.main）
+To run TensorBoard, use the following command (alternatively `python -m
+tensorboard.main`)
 
+```bash
+tensorboard --logdir=path/to/log-directory
 ```
 
+where `logdir` points to the directory where the `FileWriter` serialized its
+data.  If this `logdir` directory contains subdirectories which contain
+serialized data from separate runs, then TensorBoard will visualize the data
+from all of those runs. Once TensorBoard is running, navigate your web browser
+to `localhost:6006` to view the TensorBoard.
 
-logdir 就是 FileWriter 序列化数据的目录。如果 logdir 目录包含子目录，并且子目录具有来自单独线程的序列化数据。如果 logdir 目录包含子目录，并且子目录具有来自单独线程的序列化数据，那么 Tensorboard 将统一展示这些可视化数据。一旦 TensorBoard 运行，你可以通过你的 Web 浏览器 localhost:6006， 查看 Tensorboard。你会在 Tensorboard 右上角看到导航标签。每个选项代表一组可以可视化的序列化数据
+When looking at TensorBoard, you will see the navigation tabs in the top right
+corner. Each tab represents a set of serialized data that can be visualized.
 
-关于如何使用 **“graph”** 来显示你的图的详细信息，你可以查看 [TensorBoard: Graph Visualization](https://www.tensorflow.org/get_started/graph_viz).
+For in depth information on how to use the *graph* tab to visualize your graph,
+see @{$graph_viz$TensorBoard: Graph Visualization}.
 
-更多关于 TensorBoard 的信息，查看 [TensorBoard's GitHub](https://github.com/tensorflow/tensorboard).
+For more usage information on TensorBoard in general, see the [TensorBoard's GitHub](https://github.com/tensorflow/tensorboard).

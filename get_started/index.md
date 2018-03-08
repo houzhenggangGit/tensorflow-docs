@@ -1,24 +1,36 @@
-# 开始
+# Getting Started
 
-阅读下面的指南来对 TensorFlow 编程基础有一个简要的认识：
+For a brief overview of TensorFlow programming fundamentals, see the following
+guide:
 
   * @{$get_started/get_started$Getting Started with TensorFlow}
 
-MNIST 已经成为了尝试一个新的机器学习工具箱的经典数据集。我们提供了 3 篇指南，它们分别展示了使用 TensorFlow 训练 MNIST 模型的不同方式：
+MNIST has become the canonical dataset for trying out a new machine learning
+toolkit.  We offer three guides that each demonstrate a different approach
+to training an MNIST model on TensorFlow:
 
-  * @{$mnist/beginners$MNIST for ML Beginners}, 将从顶层 API 来介绍 MNIST。
-  * @{$mnist/pros$Deep MNIST for Experts}, 假设你已经对机器学习一些概念有所了解，我们将从比"面向初学者的 MNIST"更深的角度来讲解。
-  * @{$mnist/mechanics$TensorFlow Mechanics 101}, 将从底层 API 来讲解 MNIST。
+  * @{$mnist/beginners$MNIST for ML Beginners}, which introduces MNIST through
+    the high-level API.
+  * @{$mnist/pros$Deep MNIST for Experts}, which is more-in depth than
+    "MNIST for ML Beginners," and assumes some familiarity with machine
+    learning concepts.
+  * @{$mnist/mechanics$TensorFlow Mechanics 101}, which introduces MNIST through
+    the low-level API.
 
-对于 TensorFlow 的初级开发者来说，从顶层 API 开始学习是一个不错的选择。
-学习这些顶层的 API 可以阅读下面的材料：
+For developers new to TensorFlow, the high-level API is a good place to start.
+To learn about the high-level API, read the following guides:
 
-  * @{$get_started/estimator$tf.estimator Quickstart}, 将会介绍 tf.estimator 这个 API。
-  * @{$get_started/input_fn$Building Input Functions}, 将会帮助你更熟练的使用这个 API。
+  * @{$get_started/estimator$tf.estimator Quickstart}, which introduces this
+    API.
+  * @{$get_started/input_fn$Building Input Functions},
+    which takes you into a somewhat more sophisticated use of this API.
 
-TensorBoard 是一个将机器学习不同方面可视化的工具。
-下面的指南介绍了如何使用 TensorBoard：
+TensorBoard is a utility to visualize different aspects of machine learning.
+The following guides explain how to use TensorBoard:
 
-  * @{$get_started/summaries_and_tensorboard$TensorBoard: Visualizing Learning}, 将会指导你快速开始。
-  * @{$get_started/graph_viz$TensorBoard: Graph Visualization}, 将会介绍如何可视化计算图。计算图对于使用底层 API 的开发者来说显然更加有用。
- 
+  * @{$get_started/summaries_and_tensorboard$TensorBoard: Visualizing Learning},
+    which gets you started.
+  * @{$get_started/graph_viz$TensorBoard: Graph Visualization}, which explains
+    how to visualize the computational graph.  Graph visualization is typically
+    more useful for programmers using the low-level API.
+

@@ -1,10 +1,17 @@
-# 使用 `tf.estimator` 构建输入函数
+# Building Input Functions with tf.estimator
 
-本教程将向你展示如何使用 `tf.estimator` 构建输入函数。你会看到如何通过构造一个 `input_fn` 来对数据进行预处理并输入模型之中。最后你会实现一个 `input_fn` ，将训练、评估以及预测数据输入神经网络的 Regressor 之中，并用于预测平均房价。
+This tutorial introduces you to creating input functions in tf.estimator.
+You'll get an overview of how to construct an `input_fn` to preprocess and feed
+data into your models. Then, you'll implement an `input_fn` that feeds training,
+evaluation, and prediction data into a neural network regressor for predicting
+median house values.
 
-## 使用 `input_fn` 自定义输入管道
+## Custom Input Pipelines with input_fn
 
-`input_fn` 用于将特征和目标数据传递给 `Estimator` 的 `train` 、`evaluate` 和 `predict` 方法。用户可以在 `input_fn` 内部来对数据实施特征工程或预处理。下面这个例子取自 @{$estimator$tf.estimator Quickstart tutorial}：
+The `input_fn` is used to pass feature and target data to the `train`,
+`evaluate`, and `predict` methods of the `Estimator`.
+The user can do feature engineering or pre-processing inside the `input_fn`.
+Here's an example taken from the @{$estimator$tf.estimator Quickstart tutorial}:
 
 ```python
 import numpy as np
@@ -21,35 +28,43 @@ train_input_fn = tf.estimator.inputs.numpy_input_fn(
 classifier.train(input_fn=train_input_fn, steps=2000)
 ```
 
-### 解密 `input_fn` 
+### Anatomy of an input_fn
 
-下面的代码说明了输入函数的基本框架：
+The following code illustrates the basic skeleton for an input function:
 
 ```python
 def my_input_fn():
 
-    # 在这里对你的数据进行预处理...
+    # Preprocess your data here...
 
-    # ...然后返回
-    #     1) 一个包含相应的特征数据的特征列到张量的映射
-    #     2) 包含标签的张量
+    # ...then return 1) a mapping of feature columns to Tensors with
+    # the corresponding feature data, and 2) a Tensor containing labels
     return feature_cols, labels
 ```
 
-输入函数的本体包含了用于预处理输入数据的特定逻辑，比如清除坏数据或[特征缩放](https://en.wikipedia.org/wiki/Feature_scaling)。
+The body of the input function contains the specific logic for preprocessing
+your input data, such as scrubbing out bad examples or
+[feature scaling](https://en.wikipedia.org/wiki/Feature_scaling).
 
-输入函数必须返回一下两个值，其中包含要输入给模型的最终特征和标签数据（如上代码所示）：
+Input functions must return the following two values containing the final
+feature and label data to be fed into your model (as shown in the above code
+skeleton):
 
 <dl>
   <dt><code>feature_cols</code></dt>
-  <dd>将特征列名映射到包含对应特征数据的 <code>Tensor</code> (或 <code>SparseTensor</code>) 字典。</dd>
+  <dd>A dict containing key/value pairs that map feature column
+names to <code>Tensor</code>s (or <code>SparseTensor</code>s) containing the corresponding feature
+data.</dd>
   <dt><code>labels</code></dt>
-  <dd>包含标签值的 <code>Tensor</code>，即模型的预测值。</dd>
+  <dd>A <code>Tensor</code> containing your label (target) values: the values your model aims to predict.</dd>
 </dl>
 
-### 将特征数据转为张量
+### Converting Feature Data to Tensors
 
-若特征或标签数据存储在 [pandas](http://pandas.pydata.org/) dataframe 或者 [numpy](http://www.numpy.org/) array 中，则可以用以上方式构造 input_fn：
+If your feature/label data is a python array or stored in
+[_pandas_](http://pandas.pydata.org/) dataframes or
+[numpy](http://www.numpy.org/) arrays, you can use the following methods to
+construct `input_fn`:
 
 ```python
 import numpy as np
@@ -69,19 +84,22 @@ my_input_fn = tf.estimator.inputs.pandas_input_fn(
     ...)
 ```
 
-对于[稀疏、类别数据](https://en.wikipedia.org/wiki/Sparse_matrix)（大多数值为 0  的数据）而言，你需要使用一个具有三个参数的 `SparseTensor` 来填充数据：
+For [sparse, categorical data](https://en.wikipedia.org/wiki/Sparse_matrix)
+(data where the majority of values are 0), you'll instead want to populate a
+`SparseTensor`, which is instantiated with three arguments:
 
 <dl>
   <dt><code>dense_shape</code></dt>
-  <dd>张量的形状，需列出每个维度的元素数量。例如，<code>dense_shape=[3, 6]</code> 表示一个 3x6 的二维张量，<code>dense_shape=[2, 3, 4]</code> 表示一个 2x3x4 的二维张量，而 <code>dense_shape=[9]</code> 则表示具有 9 个元素的一维张量。</dd>
+  <dd>The shape of the tensor. Takes a list indicating the number of elements in each dimension. For example, <code>dense_shape=[3,6]</code> specifies a two-dimensional 3x6 tensor, <code>dense_shape=[2,3,4]</code> specifies a three-dimensional 2x3x4 tensor, and <code>dense_shape=[9]</code> specifies a one-dimensional tensor with 9 elements.</dd>
   <dt><code>indices</code></dt>
-  <dd>张量中非零元素的索引组成的列表，即索引列表中各元素为稀疏张量非零元素索引值所成的列表。例如，<code>indices=[[1,3], [2,4]]</code> 表示索引为 [1, 3] 和 [2, 4] 的元素具有非零值。
-</dd>
+  <dd>The indices of the elements in your tensor that contain nonzero values. Takes a list of terms, where each term is itself a list containing the index of a nonzero element. (Elements are zero-indexed—i.e., [0,0] is the index value for the element in the first column of the first row in a two-dimensional tensor.) For example, <code>indices=[[1,3], [2,4]]</code> specifies that the elements with indexes of [1,3] and [2,4] have nonzero values.</dd>
   <dt><code>values</code></dt>
-  <dd>包含所有索引列表对应元素值的一维张量，张量中的各值对应与索引所对应元素的值。例如<code>indices=[[1,3], [2,4]]</code>与所对应参数<code>values=[18, 3.6]</code>表示元素 [1, 3] 的值为 18，且元素 [2, 4] 的值为 3.6。</dd>
+  <dd>A one-dimensional tensor of values. Term <code>i</code> in <code>values</code> corresponds to term <code>i</code> in <code>indices</code> and specifies its value. For example, given <code>indices=[[1,3], [2,4]]</code>, the parameter <code>values=[18, 3.6]</code> specifies that element [1,3] of the tensor has a value of 18, and element [2,4] of the tensor has a value of 3.6.</dd>
 </dl>
 
-下面的代码定义了一个 3x5 的二维  `SparseTensor` 。位于 [0,1] 的元素值为 6，而位于 [2,4] 的元素值为 0.5 （其他所有元素为 0）：
+The following code defines a two-dimensional `SparseTensor` with 3 rows and 5
+columns. The element with index [0,1] has a value of 6, and the element with
+index [2,4] has a value of 0.5 (all other values are 0):
 
 ```python
 sparse_tensor = tf.SparseTensor(indices=[[0,1], [2,4]],
@@ -89,7 +107,7 @@ sparse_tensor = tf.SparseTensor(indices=[[0,1], [2,4]],
                                 dense_shape=[3, 5])
 ```
 
-即对应以下稀疏张量：
+This corresponds to the following dense tensor:
 
 ```none
 [[0, 6, 0, 0, 0]
@@ -97,23 +115,32 @@ sparse_tensor = tf.SparseTensor(indices=[[0,1], [2,4]],
  [0, 0, 0, 0, 0.5]]
 ```
 
-更多关于 `SparseTensor`的信息，请参考 @{tf.SparseTensor}。
+For more on `SparseTensor`, see @{tf.SparseTensor}.
 
-### 将 `input_fn` 传递给模型
+### Passing input_fn Data to Your Model
 
-为了将数据输入给模型进行训练，你需要将创建的输入函数传递给 `train` 函数的 `input_fn` 参数，例如：
+To feed data to your model for training, you simply pass the input function
+you've created to your `train` operation as the value of the `input_fn`
+parameter, e.g.:
 
 ```python
 classifier.train(input_fn=my_input_fn, steps=2000)
 ```
 
-注意，`input_fn` 参数只接受函数对象，即 `input_fn=my_input_fn`，而不是函数调用的返回值 `input_fn=my_input_fn()`。所以如果你尝试将参数传递给你的 `input_fn`，并将其最终传递给 `train` 函数，将导致 `TypeError` 的类型错误，如下所示：
+Note that the `input_fn` parameter must receive a function object (i.e.,
+`input_fn=my_input_fn`), not the return value of a function call
+(`input_fn=my_input_fn()`). This means that if you try to pass parameters to the
+`input_fn` in your `train` call, as in the following code, it will result in a
+`TypeError`:
 
 ```python
 classifier.train(input_fn=my_input_fn(training_set), steps=2000)
 ```
 
-然而，若你希望参数化输入函数，还有其他方法可以实现。你可以使用一个不带参数的函数对你的 `input_fn` 进行封装，并用它来调用你所需参数的输入函数，例如：
+However, if you'd like to be able to parameterize your input function, there are
+other methods for doing so. You can employ a wrapper function that takes no
+arguments as your `input_fn` and use it to invoke your input function
+with the desired parameters. For example:
 
 ```python
 def my_input_fn(data_set):
@@ -125,7 +152,8 @@ def my_input_fn_training_set():
 classifier.train(input_fn=my_input_fn_training_set, steps=2000)
 ```
 
-亦或者，你可以只用  Python 的 [`functools.partial`](https://docs.python.org/2/library/functools.html#functools.partial) 函数来构造一个新的函数对象，其所有参数值都是固定的：
+Alternatively, you can use Python's [`functools.partial`](https://docs.python.org/2/library/functools.html#functools.partial)
+function to construct a new function object with all parameter values fixed:
 
 ```python
 classifier.train(
@@ -133,21 +161,30 @@ classifier.train(
     steps=2000)
 ```
 
-还有一种方法则是将你的 `input_fn` 调用包含在 [`lambda`](https://docs.python.org/3/tutorial/controlflow.html#lambda-expressions) 函数中并将其传递给 `input_fn` 这个参数：
+A third option is to wrap your `input_fn` invocation in a
+[`lambda`](https://docs.python.org/3/tutorial/controlflow.html#lambda-expressions)
+and pass it to the `input_fn` parameter:
 
 ```python
 classifier.train(input_fn=lambda: my_input_fn(training_set), steps=2000)
 ```
 
-设计你自己的输入管道具有巨大的优势，正如上面所展示的那样，你可以在只改变数据设置参数的情况下将相同的 `input_fn` 传递给`evaluate` 和 `predict` 函数，例如：
+One big advantage of designing your input pipeline as shown above—to accept a
+parameter for data set—is that you can pass the same `input_fn` to `evaluate`
+and `predict` operations by just changing the data set argument, e.g.:
 
 ```python
 classifier.evaluate(input_fn=lambda: my_input_fn(test_set), steps=2000)
 ```
 
-这种方法大大增强的代码的可维护性，因为你不再需要定义多个 `input_fn`（比如：`input_fn_train`、`input_fn_test ` 和 `input_fn_predict`）。
+This approach enhances code maintainability: no need to define multiple
+`input_fn` (e.g. `input_fn_train`, `input_fn_test`, `input_fn_predict`) for each
+type of operation.
 
-最后，你可以使用 `tf.estimator.inputs` 从 numpy 或 pands 数据集中创建 `input_fn`。它的一个额外的优点是你可以使用更多参数，比如 `num_epochs` 和 `shuffle` 参数可以控制 `input_fn` 每次迭代的数据量：
+Finally, you can use the methods in `tf.estimator.inputs` to create `input_fn`
+from numpy or pandas data sets. The additional benefit is that you can use
+more arguments, such as `num_epochs` and `shuffle` to control how the `input_fn`
+iterates over the data:
 
 ```python
 import pandas as pd
@@ -171,35 +208,49 @@ def get_input_fn_from_numpy(data_set, num_epochs=None, shuffle=True):
       shuffle=shuffle)
 ```
 
-### 波士顿房价预测的神经网络模型
+### A Neural Network Model for Boston House Values
 
-本教程接下来的部分将向你介绍如何编写输入函数，并将其用于预处理一部分从 [UCI Housing Data Set](https://archive.ics.uci.edu/ml/datasets/Housing) 中获取的波士顿房屋数据，进而将其传递给神经网络的回归器来预测平均房价。
+In the remainder of this tutorial, you'll write an input function for
+preprocessing a subset of Boston housing data pulled from the [UCI Housing Data
+Set](https://archive.ics.uci.edu/ml/datasets/Housing) and use it to feed data to
+a neural network regressor for predicting median house values.
 
-[波士顿 CSV 数据设置](#setup)了你要用来训练神经网络的数据集，它的相关[特征](https://archive.ics.uci.edu/ml/machine-learning-databases/housing/housing.names)及描述如下表所示：
+The [Boston CSV data sets](#setup) you'll use to train your neural network
+contain the following
+[feature data](https://archive.ics.uci.edu/ml/machine-learning-databases/housing/housing.names)
+for Boston suburbs:
 
-| 特征      | 描述                   |
-| ------- | -------------------- |
-| CRIM    | 犯罪率                  |
-| ZN      | 住宅用地超过 25000 平方英里的比例 |
-| INDUS   | 城镇非零售商用土地的比例         |
-| NOX     | 一氧化氮浓度               |
-| RM      | 住宅平均房间数              |
-| AGE     | 1940 年之前建成的自用房屋比例    |
-| DIS     | 到波士顿五个中心区域的距离        |
-| TAX     | 每 10000 美元的全值财产税率    |
-| PTRATIO | 城镇师生比例               |
+Feature | Description
+------- | ---------------------------------------------------------------
+CRIM    | Crime rate per capita
+ZN      | Fraction of residential land zoned to permit 25,000+ sq ft lots
+INDUS   | Fraction of land that is non-retail business
+NOX     | Concentration of nitric oxides in parts per 10 million
+RM      | Average Rooms per dwelling
+AGE     | Fraction of owner-occupied residences built before 1940
+DIS     | Distance to Boston-area employment centers
+TAX     | Property tax rate per $10,000
+PTRATIO | Student-teacher ratio
 
-你的的模型将用来预测标签 MEDV，即自住房的平均房价，以千美元为单位。
+And the label your model will predict is MEDV, the median value of
+owner-occupied residences in thousands of dollars.
 
-## 数据设置{#setup}
+## Setup {#setup}
 
-这里能够下载到相关数据集：[boston_train.csv](http://download.tensorflow.org/data/boston_train.csv)、[boston_test.csv](http://download.tensorflow.org/data/boston_test.csv) 和 [boston_predict.csv](http://download.tensorflow.org/data/boston_predict.csv)。
+Download the following data sets:
+[boston_train.csv](http://download.tensorflow.org/data/boston_train.csv),
+[boston_test.csv](http://download.tensorflow.org/data/boston_test.csv), and
+[boston_predict.csv](http://download.tensorflow.org/data/boston_predict.csv).
 
-下面的小节介绍了如何一步步创建输入函数，并将这些数据集提供给神经网络的回归器，训练、模型评估并对房价进行预测。最终的完整代码[在此](https://www.tensorflow.org/code/tensorflow/examples/tutorials/input_fn/boston.py)。
+The following sections provide a step-by-step walkthrough of how to create an
+input function, feed these data sets into a neural network regressor, train and
+evaluate the model, and make house value predictions. The full, final code is [available
+here](https://www.tensorflow.org/code/tensorflow/examples/tutorials/input_fn/boston.py).
 
-### 导入房屋数据
+### Importing the Housing Data
 
-开始之前，请导入 `pandas` 和 `tensorflow` 并设置日志等级 `INFO` 来获得详细的日志输出：
+To start, set up your imports (including `pandas` and `tensorflow`) and set logging verbosity to
+`INFO` for more detailed log output:
 
 ```python
 from __future__ import absolute_import
@@ -214,8 +265,12 @@ import tensorflow as tf
 tf.logging.set_verbosity(tf.logging.INFO)
 ```
 
-`COLUMNS` 定义了数据集每列的名字。而 `FEATURES` 和 `LABEL` 的用于区分特征和标签。接下来将三个 CSV 文件 (@{tf.train}, @{tf.test}, 和 [predict](http://download.tensorflow.org/data/boston_predict.csv)) 读取到 _pandas_
- 的 `DataFrame` 中:
+Define the column names for the data set in `COLUMNS`. To distinguish features
+from the label, also define `FEATURES` and `LABEL`. Then read the three CSVs
+(@{tf.train},
+@{tf.test}, and
+[predict](http://download.tensorflow.org/data/boston_predict.csv)) into _pandas_
+`DataFrame`s:
 
 ```python
 COLUMNS = ["crim", "zn", "indus", "nox", "rm", "age",
@@ -232,17 +287,27 @@ prediction_set = pd.read_csv("boston_predict.csv", skipinitialspace=True,
                              skiprows=1, names=COLUMNS)
 ```
 
-### 定义 FeatureColumn 并创建 Regressor
+### Defining FeatureColumns and Creating the Regressor
 
-接下来，给输入数据创建一个 `FeatureColumn` 列表，用来指定正式用于训练的特征集。由于住房数据所有特征都包含连续值，因此可以使用 `tf.contrib.layers.real_valued_column()` 来创建 `FeatureColumn`:
+Next, create a list of `FeatureColumn`s for the input data, which formally
+specify the set of features to use for training. Because all features in the
+housing data set contain continuous values, you can create their
+`FeatureColumn`s using the `tf.contrib.layers.real_valued_column()` function:
 
 ```python
 feature_cols = [tf.feature_column.numeric_column(k) for k in FEATURES]
 ```
 
-提示：关于特征列的深入讨论，请参考 @{$linear#feature-columns-and-transformations$this introduction}；而有关如何对分类数据定义 `FeatureColumns`，请参考 @{$wide$Linear Model Tutorial}。
+NOTE: For a more in-depth overview of feature columns, see
+@{$linear#feature-columns-and-transformations$this introduction},
+and for an example that illustrates how to define `FeatureColumns` for
+categorical data, see the @{$wide$Linear Model Tutorial}.
 
-现在，为了将神经网络回归模型 `DNNRegressor` 实例化，你需要提供两个实参： `hidden_units` 用来指定每个隐藏层节点数（这里我们用两个包含十个节点的隐藏层）和 `feature_columns` 用来指定你刚刚定义的 `FeatureColumns`：
+Now, instantiate a `DNNRegressor` for the neural network regression model.
+You'll need to provide two arguments here: `hidden_units`, a hyperparameter
+specifying the number of nodes in each hidden layer (here, two hidden layers
+with 10 nodes each), and `feature_columns`, containing the list of
+`FeatureColumns` you just defined:
 
 ```python
 regressor = tf.estimator.DNNRegressor(feature_columns=feature_cols,
@@ -250,9 +315,10 @@ regressor = tf.estimator.DNNRegressor(feature_columns=feature_cols,
                                       model_dir="/tmp/boston_model")
 ```
 
-### 构建 `input_fn`
+### Building the input_fn
 
-为了将输入数据传递给 `regressor`，需要编写一个工厂方法来接收 _pandas_ `Dataframe` 并返回一个 `input_fn`：
+To pass input data into the `regressor`, write a factory method that accepts a
+_pandas_ `Dataframe` and returns an `input_fn`:
 
 ```python
 def get_input_fn(data_set, num_epochs=None, shuffle=True):
@@ -263,21 +329,32 @@ def get_input_fn(data_set, num_epochs=None, shuffle=True):
       shuffle=shuffle)
 ```
 
-注意，输入数据会在通过形参 `data_set` 传递给  `input_fn` 的实参，也就是说函数会处理你导入的全部 `DataFrame` 数据：`training_set`、 `test_set` 和 `prediction_set`。
+Note that the input data is passed into `input_fn` in the `data_set` argument,
+which means the function can process any of the `DataFrame`s you've imported:
+`training_set`, `test_set`, and `prediction_set`.
 
-有两个额外的实参需要提供：
-* `num_epochs`：控制迭代数据的时期。对于训练而言，若将其设置为 `None`，则 `input_fn` 持续返回数据直到满足完成一次训练所需。为了评估及预测，将其设置为1，`input_fn` 会将数据一次性全部返回，然后引发`OutOfRangeError`。这个异常会告诉 `Estimator` 停止评估或预测。
-* `shuffle`：确定是否打乱数据。对于评估和预测，若将其设置为 `False`，则 `input_fn` 会逐个迭代数据；而对于训练而言，应该将其设置为 `True`。
+Two additional arguments are provided:
+* `num_epochs`: controls the number of
+  epochs to iterate over data. For training, set this to `None`, so the
+  `input_fn` keeps returning data until the required number of train steps is
+  reached. For evaluate and predict, set this to 1, so the `input_fn` will
+  iterate over the data once and then raise `OutOfRangeError`. That error will
+  signal the `Estimator` to stop evaluate or predict.
+* `shuffle`: Whether to shuffle the data. For evaluate and predict, set this to
+  `False`, so the `input_fn` iterates over the data sequentially. For train,
+  set this to `True`.
 
-### 训练 Regressor
+### Training the Regressor
 
-对于训练 Regressor 来说，需要调用 `train` 来接收传递给 `input_fn` 的 `training_set`：
+To train the neural network regressor, run `train` with the `training_set`
+passed to the `input_fn` as follows:
 
 ```python
 regressor.train(input_fn=get_input_fn(training_set), steps=5000)
 ```
 
-然后你就会看到类似于下面的输出，每个输出表明了每一百步的训练损失。
+You should see log output similar to the following, which reports training loss
+for every 100 steps:
 
 ```none
 INFO:tensorflow:Step 1: loss = 483.179
@@ -293,23 +370,24 @@ INFO:tensorflow:Saving checkpoints for 5000 into /tmp/boston_model/model.ckpt.
 INFO:tensorflow:Loss for final step: 27.1674.
 ```
 
-### 模型评估
+### Evaluating the Model
 
-接下来，来看看训练好的模型在测试集上的表现如何。这次则是运行 `evaluate` 函数并将 `test_set` 传递给 `input_fn`：
+Next, see how the trained model performs against the test data set. Run
+`evaluate`, and this time pass the `test_set` to the `input_fn`:
 
 ```python
 ev = regressor.evaluate(
     input_fn=get_input_fn(test_set, num_epochs=1, shuffle=False))
 ```
 
-然后，通过 `ev` 来获取损失函数的值并将其输出：
+Retrieve the loss from the `ev` results and print it to output:
 
 ```python
 loss_score = ev["loss"]
 print("Loss: {0:f}".format(loss_score))
 ```
 
-你就能够看到下面的输出结果了：
+You should see results similar to the following:
 
 ```none
 INFO:tensorflow:Eval steps [0,1) for training step 5000.
@@ -317,9 +395,10 @@ INFO:tensorflow:Saving evaluation summary for 5000 step: loss = 11.9221
 Loss: 11.922098
 ```
 
-### 预测
+### Making Predictions
 
-最后，你可以使用这个模型来对 `prediction_set` 里的房价进行预测，其中包含除去没有标签的样本之外的特征数据：
+Finally, you can use the model to predict median house values for the
+`prediction_set`, which contains feature data but no labels for six examples:
 
 ```python
 y = regressor.predict(
@@ -330,19 +409,30 @@ predictions = list(p["predictions"] for p in itertools.islice(y, 6))
 print("Predictions: {}".format(str(predictions)))
 ```
 
-你的结果应包含六项房价预测值，单位为『千美元』，例如：
+Your results should contain six house-value predictions in thousands of dollars,
+e.g:
 
 ```none
 Predictions: [ 33.30348587  17.04452896  22.56370163  34.74345398  14.55953979
   19.58005714]
 ```
 
-## 其他资源
+## Additional Resources
 
-本教程只介绍了如何为神经网络的 Regressor 创建一个 `input_fn`。若需详细了解如何将 `input_fn` 应用于其他类型的模型，请查看下面的资源：
+This tutorial focused on creating an `input_fn` for a neural network regressor.
+To learn more about using `input_fn`s for other types of models, check out the
+following resources:
 
-*   @{$linear$Large-scale Linear Models with TensorFlow}：这篇文章介绍了 TensorFlow 中的线性模型，包括 TensorFlow 所提供的特征列的高层综述及数据转换技巧。
+*   @{$linear$Large-scale Linear Models with TensorFlow}: This
+    introduction to linear models in TensorFlow provides a high-level overview
+    of feature columns and techniques for transforming input data.
 
-*  @{$wide$TensorFlow Linear Model Tutorial}：这篇教程介绍了如何创建 `FeatureColumns` 和 `input_fn` 并根据人口普查数据的线性分类模型对收入范围进行预测。
+*   @{$wide$TensorFlow Linear Model Tutorial}: This tutorial covers
+    creating `FeatureColumn`s and an `input_fn` for a linear classification
+    model that predicts income range based on census data.
 
-*   @{$wide_and_deep$TensorFlow Wide & Deep Learning Tutorial}：这篇教程介绍了使用 `NNLinearCombinedClassifier` 构建的线性模型与神经网络模型的组合泛型模型的  `FeatureColumn` 和 `input_fn` 创建方法。
+*   @{$wide_and_deep$TensorFlow Wide & Deep Learning Tutorial}: Building on
+    the @{$wide$Linear Model Tutorial}, this tutorial covers
+    `FeatureColumn` and `input_fn` creation for a "wide and deep" model that
+    combines a linear model and a neural network using
+    `DNNLinearCombinedClassifier`.

@@ -1,11 +1,16 @@
-# 曼德布洛特集合
+# Mandelbrot Set
 
-对[曼德布洛特集合（Mandelbrot set）](https://en.wikipedia.org/wiki/Mandelbrot_set)进行可视化与机器学习并没有任何关系，但这个有趣的示例可以让您了解如何使用 TensorFlow 解决一般数学问题。本示例实际上是一个很幼稚的可视化实现，但它足以说明要点。（我们可能最终会给出一个更加精确的实现，以得到更加美丽的图像。）
+Visualizing the [Mandelbrot set](https://en.wikipedia.org/wiki/Mandelbrot_set)
+doesn't have anything to do with machine learning, but it makes for a fun
+example of how one can use TensorFlow for general mathematics.  This is
+actually a pretty naive implementation of the visualization, but it makes the
+point.  (We may end up providing a more elaborate implementation down the line
+to produce more truly beautiful images.)
 
 
-## 基本设置
+## Basic Setup
 
-在开始前，我们需要导入一些库。
+We'll need a few imports to get started.
 
 ```python
 # Import libraries for simulation
@@ -18,7 +23,8 @@ from io import BytesIO
 from IPython.display import Image, display
 ```
 
-现在我们将定义一个函数，用于在迭代指定次数后展示图像。
+Now we'll define a function to actually display the image once we have
+iteration counts.
 
 ```python
 def DisplayFractal(a, fmt='jpeg'):
@@ -36,15 +42,16 @@ def DisplayFractal(a, fmt='jpeg'):
   display(Image(data=f.getvalue()))
 ```
 
-## 初始化会话与变量
+## Session and Variable Initialization
 
-为了愉快的玩耍，我们会经常使用交互式会话（Interactive Session）。不过一般的会话也能圆满完成任务。
+For playing around like this, we often use an interactive session, but a regular
+session would work as well.
 
 ```python
 sess = tf.InteractiveSession()
 ```
 
-我们可以轻松地混合使用 NumPy 与 TensorFlow。
+It's handy that we can freely mix NumPy and TensorFlow.
 
 ```python
 # Use NumPy to create a 2D array of complex numbers
@@ -53,7 +60,7 @@ Y, X = np.mgrid[-1.3:1.3:0.005, -2:1:0.005]
 Z = X+1j*Y
 ```
 
-现在我们将定义并初始化 TensorFlow 张量。
+Now we define and initialize TensorFlow tensors.
 
 ```python
 xs = tf.constant(Z.astype(np.complex64))
@@ -61,15 +68,15 @@ zs = tf.Variable(xs)
 ns = tf.Variable(tf.zeros_like(xs, tf.float32))
 ```
 
-TensorFlow 要求您在使用变量前，需要明确定义并初始化它们。
+TensorFlow requires that you explicitly initialize variables before using them.
 
 ```python
 tf.global_variables_initializer().run()
 ```
 
-## 定义及运行运算
+## Defining and Running the Computation
 
-现在我们指定一系列的运算
+Now we specify more of the computation...
 
 ```python
 # Compute the new values of z: z^2 + x
@@ -90,13 +97,13 @@ step = tf.group(
   )
 ```
 
-并运行几百步
+... and run it for a couple hundred steps
 
 ```python
 for i in range(200): step.run()
 ```
 
-再看看我们得到了什么。
+Let's see what we've got.
 
 ```python
 DisplayFractal(ns.eval())
@@ -104,6 +111,6 @@ DisplayFractal(ns.eval())
 
 ![jpeg](https://www.tensorflow.org/images/mandelbrot_output.jpg)
 
-不错！
+Not bad!
 
 

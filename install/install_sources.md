@@ -1,218 +1,254 @@
-# 通过源码安装 TensorFlow
+# Installing TensorFlow from Sources
 
-本文将解释如何将 TensorFlow 源代码编译为二进制文件，并通过它安装 TensorFlow。
-需要注意的是，我们已经为 Linuc，Mac 和 Windows 用户提供过测试良好、预构建好的二进制 Tensorflow 文件，
-除此之外还提供 TensorFlow 的 [docker 镜像](https://hub.docker.com/r/tensorflow/tensorflow/)。
-所以，除非你能熟练通过源码构建复杂程序包，并且可以解决一些在文档中没有提到的不可预测的情况，建议不要自己尝试构建二进制 TensorFlow 代码。
+This guide explains how to build TensorFlow sources into a TensorFlow
+binary and how to install that TensorFlow binary.  Note that we provide
+well-tested, pre-built TensorFlow binaries for Linux, Mac, and Windows
+systems. In addition, there are pre-built TensorFlow
+[docker images](https://hub.docker.com/r/tensorflow/tensorflow/).
+So, don't build a TensorFlow binary yourself unless you are very
+comfortable building complex packages from source and dealing with
+the inevitable aftermath should things not go exactly as documented.
 
-如果上一段话没有吓退你，那么很好。这份指南将解释如何在以下操作系统上构建 TensorFlow：
+If the last paragraph didn't scare you off, welcome.  This guide explains
+how to build TensorFlow on the following operating systems:
+
 *   Ubuntu
 *   Mac OS X
 
-我们官方不支持在 Windows 上构建 TensorFlow，不过，如果你不介意参考
+We don't officially support building TensorFlow on Windows; however, you may try
+to build TensorFlow on Windows if you don't mind using the highly experimental
 [Bazel on Windows](https://bazel.build/versions/master/docs/windows.html)
-或者
-[TensorFlow CMake build](https://github.com/tensorflow/tensorflow/tree/r0.12/tensorflow/contrib/cmake)
-的经验，你可以尝试在 Windows 上搭建 TensorFlow。
+or
+[TensorFlow CMake build](https://github.com/tensorflow/tensorflow/tree/r0.12/tensorflow/contrib/cmake).
 
-## 决定安装哪种类型的 TensorFlow 
 
-你需要从以下几种类型的 TensorFlow 中选择一个构建并安装：
-* **仅支持 CPU 的TensorFlow**. 如果你的系统不支持 NVIDIVA 的 GPU，需要安装这个版本。
-  值得注意的是，这个版本的 TensorFlow 通常容易安装构建，所以即使你有 NVIDIA 的 GPU，我们仍然推荐你先安装这个版本。
-  
-* **支持 GPU 的 TensorFlow**. TensorFlow 程序在 GPU 上运行会明显比在 CPU 上快。
-  因此，如果你的系统有 NVIDIA 的 GPU，同时你需要运行对性能要求苛刻的程序时，你就需要安装这个版本的 TensorFlow，不仅需要 NVIDIA 的 GPU，你的系统还需要满足 NVIDIA 软件的要求，具体描述参考以下文档：
+## Determine which TensorFlow to install
+
+You must choose one of the following types of TensorFlow to build and
+install:
+
+* **TensorFlow with CPU support only**. If your system does not have a
+  NVIDIA® GPU, build and install this version. Note that this version of
+  TensorFlow is typically easier to build and install, so even if you
+  have an NVIDIA GPU, we recommend building and installing this version
+  first.
+* **TensorFlow with GPU support**. TensorFlow programs typically run
+  significantly faster on a GPU than on a CPU. Therefore, if your system
+  has a NVIDIA GPU and you need to run performance-critical applications,
+  you should ultimately build and install this version.
+  Beyond the NVIDIA GPU itself, your system must also fulfill the NVIDIA
+  software requirements described in one of the following documents:
 
   * @{$install_linux#NVIDIARequirements$Installing TensorFlow on Ubuntu}
   * @{$install_mac#NVIDIARequirements$Installing TensorFlow on Mac OS}
 
 
-## 克隆 TensorFlow 仓库
+## Clone the TensorFlow repository
 
-首先从克隆 TensorFlow 仓库开始
+Start the process of building TensorFlow by cloning a TensorFlow
+repository.
 
-执行以下命令，克隆 **最新** TensorFlow 仓库:
+To clone **the latest** TensorFlow repository, issue the following command:
 
 <pre>$ <b>git clone https://github.com/tensorflow/tensorflow</b> </pre>
 
-<code>git clone</code> 命令创建一个命名为 “tensorflow”
- 的子目录。克隆完成后，你可以执行下面的命令，创建一个**特定**的分支（例如一个发布分支):
-
+The preceding <code>git clone</code> command creates a subdirectory
+named `tensorflow`.  After cloning, you may optionally build a
+**specific branch** (such as a release branch) by invoking the
+following commands:
 
 <pre>
 $ <b>cd tensorflow</b>
-$ <b>git checkout</b> <i>Branch</i> # 这里 <i>Branch</i> 就是创建的分支
+$ <b>git checkout</b> <i>Branch</i> # where <i>Branch</i> is the desired branch
 </pre>
 
-例如, 执行以下命令新建“r1.0”分支，替代 master 分支：
+For example, to work with the `r1.0` release instead of the master release,
+issue the following command:
 
 <pre>$ <b>git checkout r1.0</b></pre>
 
-接下来你需要准备为
+Next, you must prepare your environment for
 [Linux](#PrepareLinux)
-或者
-[Mac OS](#PrepareMac) 准备环境。
+or
+[Mac OS](#PrepareMac)
+
 
 <a name="#PrepareLinux"></a>
-## 为 Linux 准备环境
+## Prepare environment for Linux
 
-在 Linux 上构建 TensorFlow 之前， 你需要在你的系统上安装以下构建工具：
+Before building TensorFlow on Linux, install the following build
+tools on your system:
 
   * bazel
-  * TensorFlow Python 依赖
-  * 可选, 为了支持 GPU 而安装的 NVIDIA 软件包
-
-如果系统之前未安装 Bazel，需要按照以下说明安装
-[安装 Bazel](https://bazel.build/versions/master/docs/install.html)。
+  * TensorFlow Python dependencies
+  * optionally, NVIDIA packages to support TensorFlow for GPU.
 
 
-### 安装 TensorFlow Python 依赖
+### Install Bazel
 
-安装 TensorFlow 之前, 你必须安装以下安装包:
+If bazel is not installed on your system, install it now by following
+[these directions](https://bazel.build/versions/master/docs/install.html).
 
-  * `numpy`, 一个 TensorFlow 需要安装的用于数值处理的包。
-  * `dev`, 用于添加 Python 扩展包。
-  * `pip`, 用于安装和管理 Python 包。
-  * `wheel`, 能够让你管理 Python 的 wheel 格式的压缩包。
 
-执行以下命令，安装 Python 2.7 
+### Install TensorFlow Python dependencies
+
+To install TensorFlow, you must install the following packages:
+
+  * `numpy`, which is a numerical processing package that TensorFlow requires.
+  * `dev`, which enables adding extensions to Python.
+  * `pip`, which enables you to install and manage certain Python packages.
+  * `wheel`, which enables you to manage Python compressed packages in
+    the wheel (.whl) format.
+
+To install these packages for Python 2.7, issue the following command:
 
 <pre>
 $ <b>sudo apt-get install python-numpy python-dev python-pip python-wheel</b>
 </pre>
 
-执行以下命令，安装 Python 3.n
+To install these packages for Python 3.n, issue the following command:
 
 <pre>
 $ <b>sudo apt-get install python3-numpy python3-dev python3-pip python3-wheel</b>
 </pre>
 
 
-### 可选: 安装支持 GPU 的 TensorFlow 之前的一些准备条件：
+### Optional: install TensorFlow for GPU prerequisites
 
-如果你构建的 TensorFlow 不支持 GPU，跳过以下步骤。
+If you are building TensorFlow without GPU support, skip this section.
 
-必须在你的系统中安装以下 NVIDIA <i>硬件</i>：
+The following NVIDIA <i>hardware</i> must be installed on your system:
 
-  * 支持 CUDA 3.0或以上的 GPU。 具体参考
-    [NVIDIA 文档](https://developer.nvidia.com/cuda-gpus)
-    查看支持的 GPU 列表。
+  * GPU card with CUDA Compute Capability 3.0 or higher.  See
+    [NVIDIA documentation](https://developer.nvidia.com/cuda-gpus)
+    for a list of supported GPU cards.
 
+The following NVIDIA <i>software</i> must be installed on your system:
 
-必须在你的系统中安装以下 NVIDIA <i>软件</i>：
+  * NVIDIA's Cuda Toolkit (>= 7.0). We recommend version 8.0.
+    For details, see
+    [NVIDIA's documentation](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/#axzz4VZnqTJ2A).
+    Ensure that you append the relevant Cuda pathnames to the
+    `LD_LIBRARY_PATH` environment variable as described in the
+    NVIDIA documentation.
+  * The NVIDIA drivers associated with NVIDIA's Cuda Toolkit.
+  * cuDNN (>= v3). We recommend version 5.1. For details, see
+    [NVIDIA's documentation](https://developer.nvidia.com/cudnn),
+    particularly the description of appending the appropriate pathname
+    to your `LD_LIBRARY_PATH` environment variable.
 
-  * NVIDIA's Cuda Toolkit (>= 7.0). 推荐 8.0版本.
-    详细可参考
-    [NVIDIA 文档](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/#axzz4VZnqTJ2A).
-    确保按照文档要求添加 Cuda 相对路径 “LD_LIBRARY_PATH” 到环境变量。
-  * 与 NVIDIA 的 Cuda 工具包匹配的驱动程序
-  * cuDNN (>= v3). 推荐 5.1版本. 细节参考
-    [NVIDIA 文档](https://developer.nvidia.com/cudnn),
-    注意将路径添加到 `LD_LIBRARY_PATH` 环境变量。
-    
-    
-最后,你还必须安装Cuda工具包的 `libcupti> = 8.0`。
+Finally, you must also install `libcupti` which for Cuda Toolkit >= 8.0 you do via 
 
-[NVIDIA's documentation](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/#axzz4VZnqTJ2A).
 <pre> $ <b>sudo apt-get install cuda-command-line-tools</b> </pre>
 
-添加路径到 `LD_LIBRARY_PATH` 环境变量:
+and add its path to your `LD_LIBRARY_PATH` environment variable:
 
 <pre> $ <b>export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/extras/CUPTI/lib64</b> </pre>
 
-如果 Cuda Toolkit <= 7.5, 通过调用下面的命令安装 `libcupti-dev`:
+For Cuda Toolkit <= 7.5, you install `libcupti-dev` by invoking the following command:
 
 <pre> $ <b>sudo apt-get install libcupti-dev</b> </pre>
 
 
-### 接下来
+### Next
 
-环境搭建好之后，你必须参考
-[安装指南](#ConfigureInstallation)。
+After preparing the environment, you must now
+[configure the installation](#ConfigureInstallation).
 
 
 <a name="PrepareMac"></a>
-## Mac OS 安装准备
+## Prepare environment for Mac OS
 
- 构建 TensorFlow 之前, 须在你的系统上安装以下工具:
-
+Before building TensorFlow, you must install the following on your system:
 
   * bazel
-  * TensorFlow Python 依赖
-  * 可选项：NVIDIA 工具包（支持 GPU 的 TensorFlow 版本）
-
-### 安装 bazel
-
-如果系统没有安装 Bazel ，参考
-[安装 Bazel](https://bazel.build/versions/master/docs/install.html#mac-os-x)
+  * TensorFlow Python dependencies.
+  * optionally, NVIDIA packages to support TensorFlow for GPU.
 
 
-### 安装 python 依赖
+### Install bazel
 
-安装 TensorFlow，需要安装以下依赖包：
+If bazel is not installed on your system, install it now by following
+[these directions](https://bazel.build/versions/master/docs/install.html#mac-os-x).
+
+
+### Install python dependencies
+
+To install TensorFlow, you must install the following packages:
 
   * six
-  * numpy, 一个 TensorFlow 需要的用于数值处理的包.
-  * wheel, 能够让你管理 Python 的 wheel 格式的压缩包。
+  * numpy, which is a numerical processing package that TensorFlow requires.
+  * wheel, which enables you to manage Python compressed packages
+    in the wheel (.whl) format.
 
-你可以通过 pip 安装 Python 依赖，如果机器上没有 pip，我们推荐使用 homebrew 去安装 Python 以及 pip，参考
+You may install the python dependencies using pip. If you don't have pip
+on your machine, we recommend using homebrew to install Python and pip as
+[documented here](http://docs.python-guide.org/en/latest/starting/install/osx/).
+If you follow these instructions, you will not need to disable SIP.
 
-[文档](http://docs.python-guide.org/en/latest/starting/install/osx/)进行安装.
-如果按照以上介绍安装，将不需要禁用 SIP。
-
-安装完 pip,调用以下命令 :
+After installing pip, invoke the following commands:
 
 <pre> $ <b>sudo pip install six numpy wheel</b> </pre>
 
 
 
-### 可选项: 安装支持 GPU 的 TensorFlow 时需要的前提条件 
+### Optional: install TensorFlow for GPU prerequisites
 
-如果你没有安装 brew，可以参考
-[brew 安装指导](http://brew.sh/)。
+If you do not have brew installed, install it by following
+[these instructions](http://brew.sh/).
 
-安装完 brew, 按照以下命令安装 GNU 工具:
+After installing brew, install GNU coreutils by issuing the following command:
 
 <pre>$ <b>brew install coreutils</b></pre>
 
-如果你想编译 TensorFlow 而且安装的是 XCode 7.3 以及 CUDA 7.5，那么请注意 XCode 7.3 不能兼容 CUDA 7.5 .为了弥补这个问题可以参考以下步骤
+If you want to compile tensorflow and have XCode 7.3 and CUDA 7.5 installed,
+note that Xcode 7.3 is not yet compatible with CUDA 7.5.  To remedy this
+problem, do either of the following:
 
-  * 更新 CUDA 到 8.0
-  * 下载 Xcode 7.2 并执行以下命令，设置其作为默认的编辑器:
+  * Upgrade to CUDA 8.0.
+  * Download Xcode 7.2 and select it as your default by issuing the following
+    command:
 
     <pre> $ <b>sudo xcode-select -s /Application/Xcode-7.2/Xcode.app</b></pre>
 
-**注意:** 你的系统需要满足 NVIDIA 软件的需求，具体参考以下文档：
-
+**NOTE:** Your system must fulfill the NVIDIA software requirements described
+in one of the following documents:
 
   * @{$install_linux#NVIDIARequirements$Installing TensorFlow on Linux}
   * @{$install_mac#NVIDIARequirements$Installing TensorFlow on Mac OS}
 
 
 <a name="ConfigureInstallation"></a>
-## 配置安装
+## Configure the installation
 
-在文件夹根目录里有一个命名为 <code>configure</code> 的 bash 脚本。
-这个脚本会要求你定义与 TensorFlow 相关依赖路径以及指定其他相关的配置选项，例如编译器标记。
-你必须在创建 pip 包以及安装 TensorFlow *之前*运行这个脚本。
+The root of the source tree contains a bash script named
+<code>configure</code>. This script asks you to identify the pathname of all
+relevant TensorFlow dependencies and specify other build configuration options
+such as compiler flags. You must run this script *prior* to
+creating the pip package and installing TensorFlow.
 
-如果你希望构建的 TensorFlow 支持 GPU，`configure` 将会要求你指明安装在系统上的 Cuda 以及 cuDNN 的版本，
-指明需要安装的版本替代默认选项。
+If you wish to build TensorFlow with GPU, `configure` will ask
+you to specify the version numbers of Cuda and cuDNN. If several
+versions of Cuda or cuDNN are installed on your system, explicitly select
+the desired version instead of relying on the default.
 
-`configure` 将会询问以下内容:
+One of the questions that `configure` will ask is as follows:
 
 <pre>
 Please specify optimization flags to use during compilation when bazel option "--config=opt" is specified [Default is -march=native]
 </pre>
 
-这里指的是可以在命令后面指定你用来 [构建 pip 安装包](#build-the-pip-package) 的 Bazel 方式。
-我们推荐使用默认选项 (`-march=native`)，这个会根据你本地机器的 CPU 类型优化生成的代码，
-如果你正在构建的 TensorFlow 的 CPU 类型与将要运行的 CPU 类型不同，需要参考 [the gcc
-documentation](https://gcc.gnu.org/onlinedocs/gcc-4.5.3/gcc/i386-and-x86_002d64-Options.html)进一步的优化。
+This question refers to a later phase in which you'll use bazel to 
+[build the pip package](#build-the-pip-package).  We recommend 
+accepting the default (`-march=native`), which will
+optimize the generated code for your local machine's CPU type.  However,
+if you are building TensorFlow on one CPU type but will run TensorFlow on
+a different CPU type, then consider specifying a more specific optimization
+flag as described in [the gcc
+documentation](https://gcc.gnu.org/onlinedocs/gcc-4.5.3/gcc/i386-and-x86_002d64-Options.html).
 
-这里展示一个运行 `configure` 脚本的例子，注意你自己的输入可能不同于例子中的输入
-
+Here is an example execution of the `configure` script.  Note that your
+own input will likely differ from our sample input:
 
 <pre>
 $ <b>cd tensorflow</b>  # cd to the top-level directory created
@@ -257,66 +293,82 @@ MPI support will not be enabled for TensorFlow
 Configuration finished
 </pre>
 
-如果你告知 `configure` 支持 GPU ，`configure` 将会创建一个固定的链接指定你系统上的 Cuda 库路径，
-因此每次你改变 Cuda 库路径时候你必须在重新执行 `configure` 脚本，在你调用 <code>bazel build</code> 命令之前。
+If you told `configure` to build for GPU support, then `configure`
+will create a canonical set of symbolic links to the Cuda libraries
+on your system.  Therefore, every time you change the Cuda library paths,
+you must rerun the `configure` script before re-invoking
+the <code>bazel build</code> command.
 
-注意以下几点:
+Note the following:
 
-  * 虽然可以在同样的源代码树构建 Cuda 和 non-Cuda 的配置,我们还是建议在相同的源代码树运行时，使用 bazel clean 切换这两个配置。
-  * 如果你在运行 `bazel build` 命令 *之前* 没有运行 `configure` 脚本* *, `bazel build` 命令将会失败。
+  * Although it is possible to build both Cuda and non-Cuda configs
+    under the same source tree, we recommend running `bazel clean` when
+    switching between these two configurations in the same source tree.
+  * If you don't run the `configure` script *before* running the
+    `bazel build` command, the `bazel build` command will fail.
 
 
-## 构建 pip 包
+## Build the pip package
 
-仅支持 CPU 的情况下，调用下面的命令建立一个 TensorFlow pip 包：
+To build a pip package for TensorFlow with CPU-only support,
+you would typically invoke the following command:
+
 <pre>
 $ <b>bazel build --config=opt //tensorflow/tools/pip_package:build_pip_package</b>
 </pre>
 
-
-支持 GPU 的情况下，调用下面的命令建立一个 TensorFlow pip 包：
+To build a pip package for TensorFlow with GPU support,
+invoke the following command:
 
 <pre>$ <b>bazel build --config=opt --config=cuda //tensorflow/tools/pip_package:build_pip_package</b> </pre>
 
-**注意需要在 gcc 5 或者更高版本上:** 
-这个二进制 pip 包适用在用 gcc 4 构建的 TensorFlow 网站，这个二进制包使用的是老的 ABI（应用程序二进制接口），为了能兼容旧的 ABI，你需要在 `bazel build`命令后添加 `--cxxopt="-D_GLIBCXX_USE_CXX11_ABI=0"`。
-ABI 兼容性允许针对 TensorFlow pip 包进行自定义操作，从而使你构建的包能继续运行。
+**NOTE on gcc 5 or later:** the binary pip packages available on the
+TensorFlow website are built with gcc 4, which uses the older ABI. To
+make your build compatible with the older ABI, you need to add
+`--cxxopt="-D_GLIBCXX_USE_CXX11_ABI=0"` to your `bazel build` command.
+ABI compatibility allows custom ops built against the TensorFlow pip package
+to continue to work against your built package.
 
+<b>Tip:</b> By default, building TensorFlow from sources consumes
+a lot of RAM.  If RAM is an issue on your system, you may limit RAM usage
+by specifying <code>--local_resources 2048,.5,1.0</code> while
+invoking `bazel`.
 
-<b>提示:</b> 
-通常情况下，源代码构建 TensorFlow 会占用大量内存，如果你的系统内存紧张，
-可以在调用`bazel`时指明 <code>--local_resources 2048,.5,1.0</code> 限制使用内存范围
+The <code>bazel build</code> command builds a script named
+`build_pip_package`.  Running this script as follows will build
+a `.whl` file within the `/tmp/tensorflow_pkg` directory:
 
- <code>bazel build</code> 命令执行一个叫
- `build_pip_package`
- 的脚本，执行这个脚本将会在 `/tmp/tensorflow_pkg` 目录下构建一个 `.whl` 文件。
- 
 <pre>
 $ <b>bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg</b>
 </pre>
 
 
-## 安装 pip 包
+## Install the pip package
 
-调用 `pip install` 安装 pip 包。
-`.whl` 的文件名与你的平台有关，例如下面的命令将会在 Linux 上安装 TensorFlow 1.4rc0。
+Invoke `pip install` to install that pip package.
+The filename of the `.whl` file depends on your platform.
+For example, the following command will install the pip package
 
+for TensorFlow 1.4.0rc0 on Linux:
 
 <pre>
 $ <b>sudo pip install /tmp/tensorflow_pkg/tensorflow-1.4.0rc0-py2-none-any.whl</b>
 </pre>
 
-## 验证安装是否成功 
+## Validate your installation
 
-按照以下说明验证 TensorFlow 是否安装成功：
+Validate your TensorFlow installation by doing the following:
 
-启动终端。
+Start a terminal.
 
-通过 `cd` 改变当前所在目录，在任意文件夹下（除之前调用 `configure` 命令的 `tensorflow` 子目录）
-调用 python：
+Change directory (`cd`) to any directory on your system other than the
+`tensorflow` subdirectory from which you invoked the `configure` command.
+
+Invoke python:
+
 <pre>$ <b>python</b></pre>
 
-在 python 交互式 shell 中输入以下代码：
+Enter the following short program inside the python interactive shell:
 
 ```python
 # Python
@@ -326,31 +378,37 @@ sess = tf.Session()
 print(sess.run(hello))
 ```
 
-如果系统输出以下内容，你就可以开始编写 TensorFlow 程序了：
+If the system outputs the following, then you are ready to begin writing
+TensorFlow programs:
 
 <pre>Hello, TensorFlow!</pre>
 
-如果你是 TensorFlow 新手，可以参考 @{$get_started/get_started$Getting Started with
-TensorFlow}。
+If you are new to TensorFlow, see @{$get_started/get_started$Getting Started with
+TensorFlow}.
 
-如果系统输出错误信息, 参考 [常见安装问题](#common_installation_problems)。
+If the system outputs an error message instead of a greeting, see [Common
+installation problems](#common_installation_problems).
 
-## 常见安装问题
+## Common installation problems
 
-常见安装问题一般与操作系统有关，参考以下关于安装问题的部分：
+The installation problems you encounter typically depend on the
+operating system.  See the "Common installation problems" section
+of one of the following guides:
 
   * @{$install_linux#CommonInstallationProblems$Installing TensorFlow on Linux}
   * @{$install_mac#CommonInstallationProblems$Installing TensorFlow on Mac OS}
   * @{$install_windows#CommonInstallationProblems$Installing TensorFlow on Windows}
 
-
-除了这两个指南中记录的错误之外，下面的表中还记录了其他一些在构建 TensorFlow 时遇到的错误。 
-请注意，我们在 Stack Overflow 回答关于构建和安装问题时遇到的问题。
-如果遇到前面的指南中以及下表未提及的错误消息，在 Stack Overflow 搜索。如果
-Stack Overflow 没有相关回答，在 Stack Overflow 上提一个新的问题并指定 `tensorflow` 标签。
+Beyond the errors documented in those two guides, the following table
+notes additional errors specific to building TensorFlow.  Note that we
+are relying on Stack Overflow as the repository for build and installation
+problems.  If you encounter an error message not listed in the preceding
+two guides or in the following table, search for it on Stack Overflow.  If
+Stack Overflow doesn't show the error message, ask a new question on
+Stack Overflow and specify the `tensorflow` tag.
 
 <table>
-<tr> <th>Stack Overflow 链接</th> <th> 错误信息 </th> </tr>
+<tr> <th>Stack Overflow Link</th> <th>Error Message</th> </tr>
 
 <tr>
   <td><a
@@ -379,7 +437,7 @@ Stack Overflow 没有相关回答，在 Stack Overflow 上提一个新的问题�
 </tr>
 </table>
 
-## 经过测试的源配置
+## Tested source configurations
 **Linux**
 <table>
 <tr><th>Version:</th><th>CPU/GPU:</th><th>Python Version:</th><th>Compiler:</th><th>Build Tools:</th><th>cuDNN:</th><th>CUDA:</th></tr>

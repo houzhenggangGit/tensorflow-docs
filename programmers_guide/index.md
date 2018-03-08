@@ -1,17 +1,37 @@
-# 开发者指南
+# Programmer's Guide
 
-这个单元的文档会深入到编写 TensorFlow 应用的细节中。针对 TensorFlow 1.3，我们认真的修订了这份文档，这份文档现在主要包括以下内容：
+The documents in this unit dive into the details of writing TensorFlow
+code.  For TensorFlow 1.3, we revised this document extensively.
+The units are now as follows:
 
-  * @{$programmers_guide/estimators$Estimators}，介绍了一个能够简化机器学习程序的 TensorFlow 高级 API。
-  * @{$programmers_guide/tensors$Tensors}，解释怎样创建、操作和使用 Tensor（TensorFlow 的基础对象）。
-  * @{$programmers_guide/variables$Variables}，详细说明了怎样展现程序中共享的、持久化的状态。
-  * @{$programmers_guide/graphs$Graphs and Sessions}，解释了：
-      * 数据流图，TensorFlow 将计算过程作为操作之间依赖关系的展现。
-      * 会话，TensorFlow 用来在若干台设备（本地或远程）上运行数据流图表的机制。
-    如果你使用底层的 TensorFlow API 编写程序，那么此部分内容对你来说将非常重要。如果你在使用 TensorFlow 高级 API （比如 Estimators 或 Keras） 编写程序，那么这些高级 API 会帮你管理流图和会话，但是理解流图和会话是非常有益的。
-  * @{$programmers_guide/saved_model$Saving and Restoring}，解释了如何保存和恢复你的变量和模型。
-  * @{$programmers_guide/datasets$Input Pipelines}，解释了怎么搭建数据输入总线，从而读取数据集到你的 TensorFlow 程序。
-  * @{$programmers_guide/embedding$Embeddings}，介绍了嵌入的概念，提供了一个在 TensorFlow 训练一个嵌入的样例，并演示了怎样在 TensorBoard Embedding Projector 中查看嵌入。
-  * @{$programmers_guide/debugger$Debugging TensorFlow Programs}，讲解了怎样使用 TensorFlow 调试器（tfdbg）。
-  * @{$programmers_guide/version_compat$TensorFlow Version Compatibility}，介绍了向后兼容性的支持情况
-  * @{$programmers_guide/faq$FAQ}，涵盖了一些有关 TensorFlow 的常见问题。（除了移除了一些过时内容外，我们没有针对 TensorFlow 1.3 版本对这个文档进行修订。）
+  * @{$programmers_guide/estimators$Estimators}, which introduces a high-level
+    TensorFlow API that greatly simplifies ML programming.
+  * @{$programmers_guide/tensors$Tensors}, which explains how to create,
+    manipulate, and access Tensors--the fundamental object in TensorFlow.
+  * @{$programmers_guide/variables$Variables}, which details how
+    to represent shared, persistent state in your program.
+  * @{$programmers_guide/graphs$Graphs and Sessions}, which explains:
+      * dataflow graphs, which are TensorFlow's representation of computations
+        as dependencies between operations.
+      * sessions, which are TensorFlow's mechanism for running dataflow graphs
+        across one or more local or remote devices.
+    If you are programming with the low-level TensorFlow API, this unit
+    is essential. If you are programming with a high-level TensorFlow API
+    such as Estimators or Keras, the high-level API creates and manages
+    graphs and sessions for you, but understanding graphs and sessions
+    can still be helpful.
+  * @{$programmers_guide/saved_model$Saving and Restoring}, which
+    explains how to save and restore variables and models.
+  * @{$programmers_guide/datasets$Input Pipelines}, which explains how to
+    set up data pipelines to read data sets into your TensorFlow program.
+  * @{$programmers_guide/embedding$Embeddings}, which introduces the concept
+    of embeddings, provides a simple example of training an embedding in
+    TensorFlow, and explains how to view embeddings with the TensorBoard
+    Embedding Projector.
+  * @{$programmers_guide/debugger$Debugging TensorFlow Programs}, which
+    explains how to use the TensorFlow debugger (tfdbg).
+  * @{$programmers_guide/version_compat$TensorFlow Version Compatibility},
+    which explains backward compatibility guarantees and non-guarantees.
+  * @{$programmers_guide/faq$FAQ}, which contains frequently asked
+    questions about TensorFlow. (We have not revised this document for v1.3,
+    except to remove some obsolete information.)
