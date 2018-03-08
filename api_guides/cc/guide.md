@@ -1,12 +1,12 @@
 # C++ API
-+
-+Note: By default [tensorflow.org](https://www.tensorflow.org) shows docs for the
-+most recent stable version. The instructions in this doc require building from
-+source. You will probably want to build from the `master` version of tensorflow.
-+You should, as a result, be sure you are following the
-+[`master` version of this doc](https://www.tensorflow.org/versions/master/api_guides/cc/guide),
-+in case there have been any changes.
-+
+
+Note: By default [tensorflow.org](https://www.tensorflow.org) shows docs for the
+most recent stable version. The instructions in this doc require building from
+source. You will probably want to build from the `master` version of tensorflow.
+You should, as a result, be sure you are following the
+[`master` version of this doc](https://www.tensorflow.org/versions/master/api_guides/cc/guide),
+in case there have been any changes.
+
 [TOC]
 
 TensorFlow's C++ API provides mechanisms for constructing and executing a data
